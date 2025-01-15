@@ -96,8 +96,56 @@ ggplot() +
 ```
 
 #### ggplot2 calls
- first 2 arguments for ggplot are data and mapping- dont need to type them out all the time- reduces amount of text and so makes it easier to see whats different between plots.
+First 2 arguments for ggplot are data and mapping- don't need to type them out all the time- reduces amount of text and so makes it easier to see whats different between plots. A more concise way of writing the previous plot would be: 
+```{r}
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) + 
+  geom_point()
+```
+to create the same thing using a pipe (|>):
+```{r}
+penguins |> 
+  ggplot(aes(x = flipper_length_mm, y = body_mass_g)) + 
+  geom_point()
+```
+
+
+#### Visualising Distributions
+Visualisation depends on the variable type- for categorical, something like a bar chart is more suitable. The height of the bars displays how many observations occurred with each x value.
+```{r}
+ggplot(penguins, aes(x=species)) + geom_bar()
+```
+When levels unordered, preferable to order the bars based on frequency via transforming a variable into a factor addn reordering aforementioned factor:
+```{r}
+ggplot(penguins, aes(x=fct_infreq(species))) + geom_bar()
+```
+Quantitative data can be discrete or continuous. A histogram is a commonly used visualisation for continuous variables:
+```{r}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 200)
+```
+Histograms divide the x axis into equally spaced bins- uses bar height to display no. of observations falling within each bin. Abovem tallest bar shows 39 obsv. have body_mass_g between 3500-3700g (left and right edges of bar)
+Can set interval width via binwidth argument- measured in x variable units- different binwidth= different patterns
+```{r}
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 20)
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 2000)
+```
+Alternatively, density plots are also used to visualise numerical values. This is a smoothes out version of a histogram- good for continuous data with underlying smooth distribution. Shows fewer details than a histogram but easier to quickly see shape of distribution
+
+
+
+
+
+
+. We won’t go into how geom_density() estimates the density (you can read more about that in the function documentation), but let’s explain how the density curve is drawn with an analogy. Imagine a histogram made out of wooden blocks. Then, imagine that you drop a cooked spaghetti string over it. The shape the spaghetti will take draped over blocks can be thought of as the shape of the density curve. It shows fewer details than a histogram but can make it easier to quickly glean the shape of the distribution, particularly with respect to modes and skewness.
+
+
+
+
+
  
+
 
 
 
