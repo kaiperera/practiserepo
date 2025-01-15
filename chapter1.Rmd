@@ -161,6 +161,83 @@ ggplot(diamonds, aes(x=carat)) +geom_histogram(binwidth=0.2
 
 
 #### Visualising Relationships 
+To visualise relationship between numerical and categorical variable, can use side-by-side box plots. Boxplot= visual shorthand measuring for position (percentiles) that describe distribution- useful for identifying potential outliers.
+consists of 1. Box indicatung IQR (line in middle=median)- helps discern if distribution is symmetric around median or skewed 2. visual points- dispkay observations that fall >1.5 times IQR from either edge of box- unusual so plotted individually 3. line- extends from each end of box and goes to furthest non-outlier point in distribution
+```{r}
+ggplot(penguins, aes(x = species, y = body_mass_g)) +
+  geom_boxplot()
+```
+Alternatively, density plots- linewidth customises line thickness:
+```{r}
+ggplot(penguins, aes(x = body_mass_g, color = species)) +
+  geom_density(linewidth = 0.75)
+```
+Can map species to colour and fill aestehtics- use alpha aesthetic to add transparency to filled density curves. This aesthetic takes values between 0 (completely transparent) and 1 (completely opaque).
+```{r}
+ggplot(penguins, aes(x = body_mass_g, color = species, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+To visualise 2 categorical variables, can use stacked bar charts:
+```{r}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar()
+```
+Above plot displays each species frequency with respect to islands. Shows there is an equal number of Adelies on each island but not a good sense of % balance
+```{r}
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar(position = "fill")
+```
+Above plot= relative frequency plot made by setting position= "fill" in geom- not affected by unequal numbers of penguins across islands
+These bar charts map the variable that will be separated into bars to the x aesthetic, and the variable that will change the colors inside the bars to the fill aesthetic.
+For 2 numerical variables: scatterplot:
+```{r}
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+```
+
+For 3+ variables, can map them to additional aesthetics:
+```{r}
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(aes(color = species, shape = island))
+```
+BUT adding too many aesthetics makes things cluttered- can also split plot into facets (subplots that each displays 1 set of data- esp. useful for categorical variables). The first argument of facet_wrap() is a formula3, which created with ~ followed by a variable name. The variable that passed to facet_wrap() should be categorical:
+```{r}
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(aes(color = species, shape = species)) +
+  facet_wrap(~island)
+```
+ ### Exercises for Visualising Relationships
+1) The mpg data frame that is bundled with the ggplot2 package contains 234 observations collected by the US Environmental Protection Agency on 38 car models. Which variables in mpg are categorical? Which variables are numerical? (Hint: Type ?mpg to read the documentation for the dataset.) How can you see this information when you run mpg?= Categorical= manufacturer, model, trans,drv, fl,class. Numerical=displ, year, cyl,cty,hwy
+
+2) Make a scatterplot of hwy vs. displ using the mpg data frame. Next, map a third, numerical variable to color, then size, then both color and size, then shape. How do these aesthetics behave differently for categorical vs. numerical variables?
+```{r}
+ggplot(mpg, aes(x=displ,y=hwy)) + geom_point(aes(color= year, size = cty, shape = trans))
+```
+
+In the scatterplot of hwy vs. displ, what happens if you map a third variable to linewidth?
+```{r}
+ggplot(mpg, aes(x=displ,y=hwy)) + geom_point 
+```
+
+
+What happens if you map the same variable to multiple aesthetics?
+```{r}
+ggplot(mpg, aes(x=displ, y=hwy)) + geom_point(aes(color=fl, shape=fl, size=fl))
+```
+
+Make a scatterplot of bill_depth_mm vs. bill_length_mm and color the points by species. What does adding coloring by species reveal about the relationship between these two variables? What about faceting by species?
+```{r}
+ggplot(penguins, mapping = aes(x=bill_depth_mm, y=bill_length_mm)) + geom_point(aes(color=species))
+```
+```{r}
+ggplot(penguins, mapping = aes(x=bill_depth_mm, y=bill_length_mm)) + geom_point()+facet_wrap(~species)
+```
+By adding the species variable, it can be seen that members of the same species have a similar bill depth/length to one another and are generally clustered together. Gentoo penguins tend to have average/long but shallow bills, Adelie penguins have deeper bills but they are shorter in length, and Chinstrap penguins seem to have longer and deeper beaks. 
+
+
+
+
+
 
 
 
