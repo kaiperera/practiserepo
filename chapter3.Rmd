@@ -31,7 +31,7 @@ variable names followed by abbreviations- int= integer, dbl=double(real numbers)
 
 ###dplyr basics
 primary dplyr verbs= functions: 1. 1st argument always a data frame 2.subsequent arguments usually describe which columns to operate on using variable names without quotes 3. output always a new data frame 
-Pipe Operator %>%: Passes the output of one operation as input to the nex
+
 Solving complex problesm requires combining multiple verbs- done using pipe ( |>)- takes object on left and passes it along to function on right eg) x |> f(y) is same as f(x,y). Easiest way to think of pipe is as "then". 
 ```{r}
 flights |> 
@@ -88,7 +88,6 @@ flights |>
 #flights from most to least delayed
 ```
 number of rows not changed- only arranging not filtering 
-Pipe Operator %>%: Passes the output of one operation as input to the nex
 
 ##Distinct
 finds all unique rows in a dataset- primarily operates on rows BUT you’ll want the distinct combination of some variables, so you can also optionally supply column names:
@@ -154,7 +153,7 @@ flights |>
 ```{r}
 flights |>
     filter(dep_time <1200) %>% arrange(desc(dep_delay))
- 
+ # note/ %>% the old fashioned |>
 
 ```
 
@@ -165,7 +164,7 @@ flights |>
 ```
 
 4) Was there a flight on every day of 2013?
-```{r}
+```{r answer question}
 flights |>
   
 ```
@@ -231,7 +230,7 @@ allows you to rapidly zoom in on useful subset using operations based on names o
 flights |> 
   select(year, month, day)
 ```
-2) select all columns betwwen year and day (inclusive):
+2) select all columns between year and day (inclusive):
 ```{r}
 flights |> 
   select(year:day)
@@ -279,3 +278,204 @@ flights |>
   relocate(starts_with("arr"), .before = dep_time)
 ```
 
+### Exercises
+1)Compare dep_time, sched_dep_time, and dep_delay. How would you expect those three numbers to be related?
+```{r}
+flights |> 
+  select(dep_time, sched_dep_time, dep_delay)
+```
+the depature delay value is the difference in minutes between the scheduled departure time and the actual departure time
+
+2) Brainstorm as many ways as possible to select dep_time, dep_delay, arr_time, and arr_delay from flights.
+```{r}
+flights |>
+  select(dep_time, dep_delay, arr_time, arr_delay)
+```
+```{r}
+flights |>
+  select(starts_with("arr"), starts_with("dep"))
+```
+```{r}
+flights |>
+  select(ends_with("time"), ends_with("delay"))
+```
+
+3) What happens if you specify the name of the same variable multiple times in a select() call?
+```{r}
+flights |>
+  select(dep_delay, arr_time, dep_delay)
+```
+although stated multiple times, only appears once
+
+4) What does the any_of() function do? Why might it be helpful in conjunction with this vector?
+```{r}
+variables <- c("year", "month", "day", "dep_delay", "arr_delay")
+```
+```{r}
+flights |>
+  select(any_of(variables))
+```
+any_of= Matches variable names in a character vector with no error for names that don't exist. This is useful as the data from the variables within the vector can easily be observed together
+
+5)Does the result of running the following code surprise you? How do the select helpers deal with upper and lower case by default? How can you change that default?
+```{r}
+flights |> select(contains("TIME"))
+```
+select helpers default is to ignore case, can be changed if default changed from ignore.case = TRUE to FALSE
+
+6)Rename air_time to air_time_min to indicate units of measurement and move it to the beginning of the data frame.
+```{r}
+flights |> rename(air_time_mins=air_time) |> relocate(air_time_mins)
+           
+#note- new variable name on left hand side 
+
+```
+
+7) Why doesn’t the following work, and what does the error mean?
+```{r}
+flights |> 
+  select(tailnum) |> 
+  arrange(arr_delay)
+```
+This doesnt work as there is only 1 column name in the arrange argument, also the previouse select argument isnt related and cant be used in the arrange function in this case 
+
+
+### The Pipe
+used to combine multiple verbs eg) fastest flights to Houston’s IAH airport:
+```{r}
+flights |>
+  filter( dest == "IAH") |> mutate(speed = distance/air_time*60) |> select(year:day, dep_time, carrier, flight, speed) |> arrange(desc(speed))
+```
+if didnt use pipe:
+```{r}
+arrange(
+  select(
+    mutate(
+      filter(
+        flights, 
+        dest == "IAH"
+      ),
+      speed = distance / air_time * 60
+    ),
+    year:day, dep_time, carrier, flight, speed
+  ),
+  desc(speed)
+)
+```
+Or
+```{r}
+flights1 <- filter(flights, dest == "IAH")
+flights2 <- mutate(flights1, speed = distance / air_time * 60)
+flights3 <- select(flights2, year:day, dep_time, carrier, flight, speed)
+arrange(flights3, desc(speed))
+```
+the pipe generally produces data analysis code that is easier to write and read.
+
+### Groups
+## group_by
+divides dataset into meaningful groups:
+```{r}
+flights |> group_by(month)
+```
+doesnt change data BUT in output, states "Groups: month [12]"- subsequent operations will now work by month - group by adds  grouped feature (class) to data frame- changes behavious of subsequent verbs applied to data 
+
+##Summarize
+most important grouped operation- if being used to calculate single summary statistic, reduces data frame to have single row from each group
+  In dplyr, this operation is performed by summarize(), as shown by the following example, which computes the average departure delay by month:
+```{r}
+flights |> group_by(month) |> summarise(avg_delay = mean(dep_delay))
+```
+Missing values generated as some of the observed flights have missing data in delay column- need to tell mean function to ignore missing values via na.rm=true:
+```{r}
+flights |> 
+  group_by(month) |> 
+  summarize(
+    avg_delay = mean(dep_delay, na.rm = TRUE)
+  )
+```
+useful summary= n()= returns number of rows in each group:
+```{r}
+flights |> 
+  group_by(month) |> 
+  summarize(
+    avg_delay = mean(dep_delay, na.rm = TRUE), 
+    n = n()
+  )
+```
+
+## The Slice Functions 
+5 functions that allow you to extract specific rows from within each group:
+  a) df |> slice_head(n = 1) takes the first row from each group.
+  b) df |> slice_tail(n = 1) takes the last row in each group.
+  c) df |> slice_min(x, n = 1) takes the row with the smallest value of column x.
+  d) df |> slice_max(x, n = 1) takes the row with the largest value of column x.
+  e) df |> slice_sample(n = 1) takes one random row
+can vary n to select more than one row, or instead of n =, you can use prop = 0.1 to select (e.g.) 10% of the rows in each group
+```{r}
+flights |> group_by(dest) |> slice_max(arr_delay, n=1) |> relocate(dest)
+```
+105 destinations but 108 rows- slice_min and slice_max keep tied values- n=1 means give us all rows w the highest value. If want exactly one row per group, can set with_ties = FALSE. - similar to computing max delay w summarise but get whole corresponding row(s) instead of single summary stat
+
+## Grouping by multiple variables
+Group for each date:
+```{r}
+daily <- flights |> group_by(year, month, day)
+```
+```{r}
+daily
+```
+when tibble grouped by more than 1 variable summarised, each summary peels off the last group- above not the best way to make function work but its hard to change without breaking existing code. To make it obvious what’s happening, dplyr displays a message that tells you how you can change this behavior:
+```{r}
+daily_flights <- daily |> summarise(n=n())
+```
+If you’re happy with this behavior, you can explicitly request it in order to suppress the message:
+```{r}
+daily_flights <- daily |> 
+  summarize(
+    n = n(), 
+    .groups = "drop_last"
+  )
+```
+Alternatively, change the default behavior by setting a different value, e.g., "drop" to drop all grouping or "keep" to preserve the same groups
+
+##Ungrouping
+might want to remove grouping without using summarise:
+```{r}
+daily |> ungroup()
+```
+what happens when summarise an ungrouped data frame:
+```{r}
+daily |> 
+  ungroup() |>
+  summarize(
+    avg_delay = mean(dep_delay, na.rm = TRUE), 
+    flights = n()
+  )
+```
+single row back- dplyr treats all rows in ungrouped data frame as belonging to 1 group
+
+##.by
+new syntax for per-operation grouping:
+```{r}
+flights |> summarise(delay = mean(dep_delay, na.rm=TRUE), n=n(), .by=month)
+```
+Or if want to group by multiple variables:
+```{r}
+flights |> summarise(delay = mean(dep_delay, na.rm= TRUE), n=n(), .by=c(origin,dest))
+```
+.by works with all verbs- has advantage of not needing .groups argument to suppress grouping message or ungroup when finished 
+
+
+### Exercises
+1) Which carrier has the worst average delays? 
+```{r}
+flights |> summarise(delay = mean(dep_delay, na.rm = TRUE), n=n(), .by = carrier) |> arrange(desc(delay))
+```
+F9 had worst average delays
+
+2) Find the flights that are most delayed upon departure from each destination.
+```{r}
+flights |> summarise(delay = mean(dep_delay, na.rm = TRUE), n=n(), .by = dest) |> arrange(desc(delay))
+```
+
+3) How do delays vary over the course of the day? Illustrate your answer with a plot - continue from here tomorrow 
