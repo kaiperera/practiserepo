@@ -1,0 +1,179 @@
+---
+title: "chapter_3"
+output: html_document
+date: "2025-01-21"
+---
+#### Data Transformation
+### Prerequisites
+```{r}
+library(tidyverse)
+```
+```{r}
+library(nycflights13)
+```
+Knowing package helps find related functions so when need to be precise about which package function comes from: packagename::functionname()
+
+###nycflights13
+To explore the basic dplyr verbs, use nycflights13::flights:
+```{r}
+nycflights13::flights
+```
+flights is a tibble- dataframe for large data sets. Main difference between tibbles and data frames is way its printed- tibbles only print enough to fit on screen . If want to see everything:
+```{r}
+view(flights)
+```
+or
+```{r}
+glimpse(flights)
+```
+variable names followed by abbreviations- int= integer, dbl=double(real numbers), chr=character/strings, dttm=date-time. Important as operations you can perform on column depends a lot on type
+
+
+###dplyr basics
+primary dplyr verbs= functions: 1. 1st argument always a data frame 2.subsequent arguments usually describe which columns to operate on using variable names without quotes 3. output always a new data frame 
+Solving complex problesm requires combining multiple verbs- done using pipe ( |>)- takes object on left and passes it along to function on right eg) x |> f(y) is same as f(x,y). Easiest way to think of pipe is as "then". 
+```{r}
+flights |> 
+  filter (dest == "IAH") |> 
+  group_by(year,month,day) |>
+  summarize(arr_delay = mean (arr_delay, na.rm = TRUE))
+```
+dplyr’s verbs are organized into four groups based on what they operate on: rows, columns, groups, or tables
+
+###Rows
+most important verbs operating on rows= filter()= changes which rows are present without changing order
+arrange()= changes order of rows without changing which ones are present
+Both functions only affect rows- columns left unchanged
+distinct()= finds rows with unique values- can also optionally modify columns
+## Filter
+allows you to keep rows based on column value. First argument= dataframe. Second and subsequent arguments are conditions that must be true to keep row. Eg) could find all flights that departed more than 120 minutes late: 
+```{r}
+flights |> filter(dep_delay > 120)
+```
+As well as > (greater than), you can use >= (greater than or equal to), < (less than), <= (less than or equal to), == (equal to), and != (not equal to). You can also combine conditions with & or , to indicate “and” (check for both conditions) or with | to indicate “or” (check for either condition):
+```{r}
+# Flights that departed Jan 1
+flights |> 
+  filter(month == 1 & day==1)
+```
+```{r}
+#Flights departed in Jan or Feb
+flights |>
+  filter (month==1 |month== 2)
+```
+shortcut for combining | and ==: %in%. It keeps rows where the variable equals one of the values on the right:
+```{r}
+# Shortcut- flights either jan or feb
+flights |>
+  filter(month %in% c(1,2))
+```
+When you run filter() dplyr executes the filtering operation, creating a new data frame, and then prints it. It doesn’t modify the existing flights dataset because dplyr functions never modify their inputs. To save the result, you need to use the assignment operator, <-:
+```{r}
+jan1 <- flights |>
+  filter(month==1 & day==1)
+```
+## Arrange
+changes order of rows based on value of columns- takes data frame and set of column names (or more complicated expressions) to order by.
+If more than 1 column name provided, each additional column will be used to break ties in values of preceding columns. For example, the following code sorts by the departure time, which is spread over four columns. We get the earliest years first, then within a year, the earliest months:
+```{r}
+flights |>
+  arrange(year, month, day, dep_time)
+```
+can use desc() on a column inside of arrange() to re-order the data frame based on that column in descending (big-to-small) order:
+```{r}
+flights |>
+  arrange(desc(dep_delay))
+#flights from most to least delayed
+```
+number of rows not changed- only arranging not filtering 
+##Distinct
+finds all unique rows in a dataset- primarily operates on rows BUT you’ll want the distinct combination of some variables, so you can also optionally supply column names:
+```{r}
+#remove any duplicate rows
+flights |>
+  distinct()
+```
+Alternatively, if you want to keep other columns when filtering for unique rows, you can use the .keep_all = TRUE option.
+```{r}
+flights |>
+  distinct(origin,dest, .keep_all = TRUE)
+```
+all of these distinct flights on Jan1- will find first occurrence of unique row in dataset and discard rest
+If you want to find number of occurrences instead , swap distinct () for count()- with sort = TRUE argument, can arrange in descending order of number of occurrences:
+```{r}
+flights |>
+  count(origin, dest, sort = TRUE)
+```
+
+
+### Exercises
+1) In a single pipeline for each condition, find all flights that meet the condition:
+
+    a) Had an arrival delay of two or more hours
+```{r}
+flights |>
+  filter(arr_delay >= 120)
+  
+```
+    
+    b) Flew to Houston (IAH or HOU)
+```{r}
+flights |>
+  filter(dest == "IAH" | dest == "HOU")
+```
+    
+    c) Were operated by United, American, or Delta
+```{r}
+flights |>
+  filter(carrier == "AA" | carrier == "DL"  | carrier == "UA")
+```
+    
+    d) Departed in summer (July, August, and September)
+```{r}
+flights |>
+  filter (month == 7 | month == 8 | month == 9)
+```
+   
+    e) Arrived more than two hours late but didn’t leave late
+```{r}
+flights |>
+  filter(arr_delay > 120 & dep_delay == 0 )
+```
+    
+    f) Were delayed by at least an hour, but made up over 30 minutes in flight
+```{r}
+flights |>
+  filter(dep_delay > 60 & air_time > 30)
+```
+
+2) Sort flights to find the flights with the longest departure delays. Find the flights that left earliest in the morning:- earliest flight at 06:41 on 9th Jan
+```{r}
+flights |>
+    arrange(desc(dep_delay))
+ 
+
+```
+
+3) Sort flights to find the fastest flights. 
+```{r}
+flights |>
+  arrange(air_time)
+```
+
+4) Was there a flight on every day of 2013?
+```{r}
+flights |>
+  
+```
+
+5) Which flights traveled the farthest distance? Which traveled the least distance?
+```{r}
+flights |>
+  arrange(desc(distance))
+```
+furthest distance = 4983, least distance= 2586
+
+
+6) Does it matter what order you used filter() and arrange() if you’re using both? Why/why not? Think about the results and how much work the functions would have to do: better to use filter first 
+
+
