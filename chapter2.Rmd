@@ -1,0 +1,81 @@
+---
+title: "chapter 2"
+output: html_document
+date: "2025-01-21"
+---
+#### Coding Basics
+can use to do basic maths:
+```{r}
+1/200*30
+sin (pi/2)
+```
+can create new objects w assignment order:
+```{r}
+x<- 3*4
+```
+x stored not printed- can see stored variables in environment tab
+
+can combine multiple elements into vector:
+```{r}
+prime <- c(2,3,5,7,11,13)
+```
+basic maths in vector is applied to every element:
+```{r}
+prime*2
+```
+all assignment statements have same form= object_name<- value
+
+#### Testing Out Basics
+```{r}
+x
+```
+```{r}
+random<-2.5 
+```
+
+#### Calling Functions
+R has collection of built in functions- function_name(argument1 = value1, argument2 = value2, ...)
+```{r}
+seq(from=1, to =10)
+```
+often omit the names of the first several arguments in function calls:
+```{r}
+seq(1,10)
+```
+```{r}
+x<- "hello"
+```
+
+
+### Exercises
+1) Why does this code not work?:
+```{r}
+my_variable <- 10
+my_varıable
+#> Error: object 'my_varıable' not found
+```
+Variable name misspelt
+
+2) Tweak each of the following R commands so that they run correctly:
+```{r}
+libary(todyverse)
+
+ggplot(dTA = mpg) + 
+  geom_point(maping = aes(x = displ, y = hwy)) +
+  geom_smooth(method = "lm)
+```
+```{r}
+library(tidyverse)
+
+```
+```{r}
+ggplot(data = mpg, mapping = aes(x = displ, y = hwy)) +
+  geom_point() + geom_smooth(method = "lm")
+```
+
+3) Press Option + Shift + K / Alt + Shift + K. What happens? How can you get to the same place using the menus?= shortcut menu comes up, also on help tab
+
+
+
+
+
