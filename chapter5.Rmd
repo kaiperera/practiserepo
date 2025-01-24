@@ -1,0 +1,148 @@
+---
+title: "chapter_5"
+output: html_document
+date: "2025-01-24"
+---
+#### Data Tidying
+### Prerequisites
+tidyr= a package that provides a bunch of tools to help tidy up your messy datasets. tidyr is a member of the core tidyverse
+```{r}
+library(tidyverse)
+```
+
+### Tidy Data
+There are three interrelated rules that make a dataset tidy:
+
+    Each variable is a column; each column is a variable.
+    Each observation is a row; each row is an observation.
+    Each value is a cell; each cell is a single value.
+why is it good to ensure data is tidy?
+1. consistent data structure= easier to learn tools that work with it as have underlying uniformity
+2. specific advantage to placing variables in columns- allows R's vectorised nature to work- most built-in R functions work with vectors of values. That makes transforming tidy data feel particularly natural
+
+dplyr, ggplot2, and all the other packages in the tidyverse are designed to work with tidy data
+
+pivot_wider is used to convert long-format data into a wide format, where one or more columns are spread into multiple columns based on unique values within those columns
+
+### Exercises
+1) For each of the sample tables, describe what each observation and each column represent:
+```{r}
+table1
+#> # A tibble: 6 × 4
+#>   country      year  cases population
+#>   <chr>       <dbl>  <dbl>      <dbl>
+#> 1 Afghanistan  1999    745   19987071
+#> 2 Afghanistan  2000   2666   20595360
+#> 3 Brazil       1999  37737  172006362
+#> 4 Brazil       2000  80488  174504898
+#> 5 China        1999 212258 1272915272
+#> 6 China        2000 213766 1280428583
+
+table2
+#> # A tibble: 12 × 4
+#>   country      year type           count
+#>   <chr>       <dbl> <chr>          <dbl>
+#> 1 Afghanistan  1999 cases            745
+#> 2 Afghanistan  1999 population  19987071
+#> 3 Afghanistan  2000 cases           2666
+#> 4 Afghanistan  2000 population  20595360
+#> 5 Brazil       1999 cases          37737
+#> 6 Brazil       1999 population 172006362
+#> # ℹ 6 more rows
+
+table3
+#> # A tibble: 6 × 3
+#>   country      year rate             
+#>   <chr>       <dbl> <chr>            
+#> 1 Afghanistan  1999 745/19987071     
+#> 2 Afghanistan  2000 2666/20595360    
+#> 3 Brazil       1999 37737/172006362  
+#> 4 Brazil       2000 80488/174504898  
+#> 5 China        1999 212258/1272915272
+#> 6 China        2000 213766/1280428583
+```
+In each of the 3 tables, each observation relates to a country. In table 1, country= country name, year= year of data collection and cases= number of people with TB in that year. population= population of the country in that year. 
+In table 2, country and year are the same as table 1 but type= type of number and count= number of observations (cases or population depending on type). 
+In table 3, country and year are the same but rate= rate of disease (cases/population)
+
+2) Sketch out the process you’d use to calculate the rate for table2 and table3. You will need to perform four operations:
+
+    Extract the number of TB cases per country per year.
+    Extract the matching population per country per year.
+    Divide cases by population, and multiply by 10000.
+    Store back in the appropriate place
+```{r}
+#table2             
+  table2 |>
+  pivot_wider(
+    names_from = type, 
+    values_from = count
+  ) |> 
+  mutate(rate = cases / population * 10000)
+  
+  
+ 
+```
+```{r}
+#table3
+table3 |> 
+   separate_wider_delim(
+    cols = rate, 
+    delim = "/", 
+    names = c("cases", "population"),
+  ) |>
+  mutate(
+    cases = as.numeric(cases),
+    population = as.numeric(population),
+    rate = cases / population * 10000)
+```
+  
+### Lengethening Data
+Most real data untidy because:
+  1. Data is often organized to facilitate some goal other than analysis. For example, it’s common for data to be structured to make data entry, not analysis, easy.
+  2. Most people aren’t familiar with the principles of tidy data, and it’s hard to derive them yourself unless you spend a lot of time working with data
+
+Need to pivot data into tidy form, with variables in columns and observations in rows
+tidyr provides 2 functions for pivoting data: 
+  1. pivot_longer()
+  2. pivot_wider()
+
+
+## Data in Column Names
+Using billboard dataset- each observation a song. 1st 3 columns (artist, track, date.entered) = variables describing song
+76 columns (wk1-wk76) describing rank of the song in each week- column names 1 variable (the week) and cell values are another (rank)
+To tidy, we use pivot_longer()
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank"
+  )
+```
+"week" and "rank" are quoted because those are new variables we’re creating, they don’t yet exist in the data when we run the pivot_longer() call
+ What happens if a song is in the top 100 for less than 76 weeks? In resultant, longer dataframe, output suggests Baby Dont Cry was only in top 100 for 7 weeks and all remaining weeks filled with missing values- NAs dont represent unknown observations- forced to exist by stucture of dataset2- ask pivot_longer() to get rid of them by setting values_drop_na = TRUE
+```{r}
+billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE
+  )
+```
+number of rows now much lower 
+Data now tidy, but could make future computation easier by converting values of week from character strings to numbers using mutate() and readr::parse_number(). parse_number() is a  function that will extract the first number from a string, ignoring all other text.
+```{r}
+billboard_longer <- billboard |> 
+  pivot_longer(
+    cols = starts_with("wk"), 
+    names_to = "week", 
+    values_to = "rank",
+    values_drop_na = TRUE
+  ) |> 
+  mutate(
+    week = parse_number(week)
+  )
+```
+
