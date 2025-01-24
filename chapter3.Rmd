@@ -475,7 +475,123 @@ F9 had worst average delays
 
 2) Find the flights that are most delayed upon departure from each destination.
 ```{r}
-flights |> summarise(delay = mean(dep_delay, na.rm = TRUE), n=n(), .by = dest) |> arrange(desc(delay))
+flights |>  summarise(delay = mean(dep_delay, na.rm = TRUE), n=n(), .by = dest) |> arrange(desc(delay))  
 ```
 
-3) How do delays vary over the course of the day? Illustrate your answer with a plot - continue from here tomorrow 
+3) How do delays vary over the course of the day? Illustrate your answer with a plot 
+```{r}
+flights |> group_by(hour) |>  summarise(avg_dep_delay = mean (dep_delay, na.rm = TRUE)) |> ggplot (aes(x = hour, y= avg_dep_delay)) + geom_smooth()
+```
+4) What happens if you supply a negative n to slice_min() and friends?: data not sliced from lowest (min)/ highest(max) value 
+```{r}
+flights |> slice_min(dep_delay, n=-5) |> relocate(dep_delay)
+```
+```{r}
+flights |>  slice_min(dep_delay, n=5) |> relocate(dep_delay)
+```
+```{r}
+flights |> slice_max(dep_delay, n=-5) |>  relocate(dep_delay)
+```
+```{r}
+flights |> slice_max(dep_delay, n=5) |> relocate(dep_delay)
+```
+
+5)Explain what count() does in terms of the dplyr verbs you just learned. What does the sort argument to count() do?: count() counts the number of observations in an argument, the sort argument If TRUE, will show the largest groups at the top.
+
+6)Suppose we have the following tiny data frame:
+```{r}
+df <- tibble(
+  x = 1:5,
+  y = c("a", "b", "a", "a", "b"),
+  z = c("K", "K", "L", "L", "K")
+)
+```
+
+  a) Write down what you think the output will look like, then check if you were correct, and describe what group_by() does: the df variable is grouped by y
+```{r}
+df |>
+  group_by(y)
+```
+
+  b) Write down what you think the output will look like, then check if you were correct, and describe what arrange() does. Also, comment on how it’s different from the group_by() in part (a).
+```{r}
+df |>
+  arrange(y)
+```
+df will be arranged in ascending order based on the values of y
+
+  c) Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does.
+```{r}
+df |>
+  group_by(y) |>
+  summarize(mean_x = mean(x))
+```
+df will be grouped from y, and based on this grouping the mean of x will be summarised
+
+  d) Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. Then, comment on what the message says.
+```{r}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+```
+df will be grouped by y and z, and based on this grouping the average for x will be calculated 
+
+  e) Write down what you think the output will look like, then check if you were correct, and describe what the pipeline does. How is the output different from the one in part (d)?
+```{r}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x), .groups = "drop")
+```
+  df will be grouped by y and z, and following this the mean of x will be calculated. Following this, the groups are dropped/ ungrouping 
+  
+  f) Write down what you think the outputs will look like, then check if you were correct, and describe what each pipeline does. How are the outputs of the two pipelines different?
+```{r}
+df |>
+  group_by(y, z) |>
+  summarize(mean_x = mean(x))
+
+df |>
+  group_by(y, z) |>
+  mutate(mean_x = mean(x))
+```
+  
+for the first output, df is grouped by y and z and following this the mean of x is calculated. for the second output, df is grouped by y and z and, following this, the columns are mutated such that a new column containing the mean of x is generated. The first output has an additionaly row whilst the second output has the same number of rows as the original dataset
+
+
+
+### Case Study: Aggregates and Sample Sizes
+When doing any aggregation, good to include a count(n())- ensures conclusions arent drawn based on small amounts of data
+eg) Lahman package- compare what proportion of times a player gets a hit (H) vs. the number of times they try to put the ball in play (AB)
+```{r}
+batters <- Lahman::Batting |> 
+  group_by(playerID) |> 
+  summarize(
+    performance = sum(H, na.rm = TRUE) / sum(AB, na.rm = TRUE),
+    n = sum(AB, na.rm = TRUE)
+  )
+```
+When plotting batter skill (performance- measure of batting average) against number of oppurtunities to hit ball (n- measured by times at bat), see 2 patterns:
+  1) performance variation larger among players with fewer at- bats. When plotting mean/other summary stat vs group size, will see that the variation decreases as sample size increased
+  2) positive correlation between performance and n- teams want to give best batters most oppurtunities to hit ball 
+```{r}
+batters |> 
+  filter(n > 100) |> 
+  ggplot(aes(x = n, y = performance)) +
+  geom_point(alpha = 1 / 10) + 
+  geom_smooth(se = FALSE)
+```
+when combing dplyr and ggplot, remember to switch from |> to +
+Has important implications for ranking- if naively sort desc(perfomrance), people w best batting averages are clearly the ones who tried putting the ball in play very few times and happened to hit it, not necessarily the most skilled players: 
+```{r}
+batters |> 
+  arrange(desc(performance))
+```
+
+
+
+
+
+
+
+
+
