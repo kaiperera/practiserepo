@@ -145,4 +145,171 @@ billboard_longer <- billboard |>
     week = parse_number(week)
   )
 ```
+We now have all the week numbers in 1 variable and all rank variables in another - can now visualise how song ranks change over time:
+```{r}
+billboard_longer |> 
+  ggplot(aes(x = week, y = rank, group = track)) + 
+  geom_line(alpha = 0.25) + 
+  scale_y_reverse()
+```
 
+## How does pivoting work?
+Suppose we have three patients with ids A, B, and C, and we take two blood pressure measurements on each patient. We’ll create the data with tribble(), a  function for constructing small tibbles by hand:
+```{r}
+df <- tribble(
+  ~id,  ~bp1, ~bp2,
+   "A",  100,  120,
+   "B",  140,  115,
+   "C",  120,  125
+)
+```
+Want new dataset to have 3 variables- id already exists , measurement for columns names, and value for cell values. To do this, need to pivot df longer:
+```{r}
+df |> 
+  pivot_longer(
+    cols = bp1:bp2,
+    names_to = "measurement",
+    values_to = "value"
+  )
+```
+In R, pivoting reshapes data between wide and long formats.
+
+    Pivoting wider (e.g., with pivot_wider() from the tidyverse) spreads values of a variable across multiple columns, creating new columns for each category.
+    Pivoting longer (e.g., with pivot_longer()) condenses multiple columns into two key columns: one for variable names and another for values, making the data longer and tidier.
+
+This helps reorganize data for analysis or visualization.
+
+## Many Variables in Column Names
+Who2 dataset= six pieces of information recorded in who2: the country and the year (already columns); the method of diagnosis, the gender category, and the age range category (contained in the other column names); and the count of patients in that category (cell values). 
+To organize these six pieces of information in six separate columns,use pivot_longer(), with vector of column names for names_to + instructors for splitting original variable names into pieces for  names_sep as well as column name for values_to:
+
+Basically instead of the column names pivoting into a single column, they pivot into multiple columns:
+```{r}
+who2 |>  
+  pivot_longer(
+    cols = !(country:year),
+    names_to = c("diagnosis", "gender", "age"),
+    names_sep = "_",
+    values_to = "count"
+  )
+```
+Alternative to names_sep = names_pattern= extracts variables from more complex naming scenarios
+
+## Data and Variable Names in Columns Headers:
+next step up in complexity is when the column names include a mix of variable values and variable names. For example, the household dataset:
+```{r}
+household
+```
+dataset= 5 families w names / DOB of up to 2 children. Column names in this dataset contain names of 2 varibales (dob, name), and value of another (child w values 1 or 2). To solve, need to supply vector to names_to BUT need to use special .value sentinel- not variable name but tells pivot_longer to act differently- overrides usualy value_to argument to use first component of pivoted column names as variable name for output:
+```{r}
+household |> 
+  pivot_longer(
+    cols = !family,
+    names_to = c(".value", "child"),
+    names_sep = "_",
+    values_drop_na = TRUE
+  )
+```
+When you use ".value" in names_to, the column names in the input contribute to both values and variable names in the output
+
+## Widening Data
+ pivot_longer() to solve the common class of problems where values have ended up in column names.
+ pivot_wider(), which makes datasets wider by increasing columns and reducing rows and helps when one observation is spread across multiple rows.
+ 
+ cms_patient_experience, a dataset from the Centers of Medicare and Medicaid services that collects data about patient experiences:
+```{r}
+cms_patient_experience
+```
+ core unit being studied is organisation, but each one spread across 6 rows- can see the complete set of values for measure_cd and measure_title by using distinct():
+```{r}
+cms_patient_experience |> 
+  distinct(measure_cd, measure_title)
+```
+ pivot_wider() has the opposite interface to pivot_longer()- instead of choosing new column names, we need to provide the existing columns that define the values (values_from) and the column name (names_from):
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+ output doesnt look good, still have multiple rows per organisation- also need to tell pivot_wider which column(s) have values that uniquely identify each row eg) variables staring w org:
+```{r}
+cms_patient_experience |> 
+  pivot_wider(
+    id_cols = starts_with("org"),
+    names_from = measure_cd,
+    values_from = prf_rate
+  )
+```
+ 
+ ## How does pivot_wider work?
+ simple datase:
+```{r}
+df <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "B",        "bp1",    140,
+  "B",        "bp2",    115, 
+  "A",        "bp2",    120,
+  "A",        "bp3",    105
+)
+```
+ take the values from the value column and the names from the measurement column:
+```{r}
+df |> 
+  pivot_wider(
+    names_from = measurement,
+    values_from = value
+  )
+```
+ o begin the process pivot_wider() needs to first figure out what will go in the rows and columns. The new column names will be the unique values of measurement:
+```{r}
+df |> 
+  distinct(measurement) |> 
+  pull()
+```
+ By default, the rows in the output are determined by all the variables that aren’t going into the new names or values. These are called the id_cols. Here there is only one column, but in general there can be any number.
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct()
+```
+  pivot_wider() then combines these results to generate an empty data frame:
+```{r}
+df |> 
+  select(-measurement, -value) |> 
+  distinct() |> 
+  mutate(x = NA, y = NA, z = NA)
+```
+ Then fills in all missing values using data from input
+ in this case not every cell in output has corresponding value in input- no 3rd blood pressure measurement for patient B- cell remains missing
+what happens if there are multiple rows in the input that correspond to one cell in the output? The example below has two rows that correspond to id “A” and measurement “bp1”:
+```{r}
+df <- tribble(
+  ~id, ~measurement, ~value,
+  "A",        "bp1",    100,
+  "A",        "bp1",    102,
+  "A",        "bp2",    120,
+  "B",        "bp1",    140, 
+  "B",        "bp2",    115
+)
+```
+If we attempt to pivot this we get an output that contains list-columns:
+```{r}
+df |> 
+  pivot_wider(
+    names_from = measurement, 
+    values_from = value
+  )
+```
+
+ follow the hint in the warning to figure out where the problem is:
+```{r}
+df |> 
+  group_by(id, measurement) |> 
+  summarise(n = n(), .groups = "drop") |> 
+  filter(n >1)
+```
+ It’s then up to you to figure out what’s gone wrong with your data and either repair the underlying damage or use your grouping and summarizing skills to ensure that each combination of row and column values only has a single row.
+ 
