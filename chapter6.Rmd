@@ -1,0 +1,38 @@
+---
+title: "chapter_6"
+output: html_document
+date: "2025-01-28"
+---
+#### Workflow: Scripts and Projects
+### Running Code
+The key to using the script editor effectively is to memorize one of the most important keyboard shortcuts: Cmd/Ctrl + Enter. This executes the current R expression in the console. For example, take the code below.
+```{r}
+library(dplyr)
+library(nycflights13)
+
+not_cancelled <- flights |> 
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+not_cancelled |> 
+  group_by(year, month, day) |> 
+  summarize(mean = mean(dep_delay))
+```
+can either run entire chunk or place cursor somewhere in line with code u want to run and jst do ctrl enter 
+
+### Saving and Naming
+names should be machine readable- no spaces/symbols/ special characters 
+should also be human readable- use file names to explain whats being shown 
+names should play well with default ordering - start file names w numbers so that alphabetical sorting puts them in order they get used 
+
+### Projects
+for now having R preserve workspace ok but later might want to not do that apparently 
+```{r}
+library(tidyverse)
+
+ggplot(diamonds, aes(x = carat, y = price)) + 
+  geom_hex()
+ggsave("diamonds.png")
+
+write_csv(diamonds, "data/diamonds.csv")
+```
+
