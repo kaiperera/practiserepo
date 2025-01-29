@@ -1,0 +1,34 @@
+---
+title: "chapter8_2"
+output: html_document
+date: "2025-01-29"
+---
+####Help
+### Reprex
+reproducible example
+good reprex makes it easier for people to help
+2 parts to create a reprex:
+  1.need to make code reproducible - capture everything i.e. include any library() calls and create   all necessary objects. The easiest way to make sure you’ve done this is using the reprex package.
+  2. make it minimal -  This usually involves creating a much smaller and simpler R object than the one you’re facing in real life or even using built-in data.
+  
+When creating a reprex by hand, it’s easy to accidentally miss something, meaning your code can’t be run on someone else’s computer. Avoid by using the reprex package, which is installed as part of the tidyverse:
+```{r SAMPLE CODE}
+y <- 1:4
+mean(y) #example
+```
+summon reprex:
+```{r SUMMON REPREX}
+reprex::reprex()
+```
+Reprex automatically copies to clipboard 
+text formatted to markdown- can be pasted to site such as GitHub and Stack Overflow
+
+3 things needed to ensure code is reproducible:
+  1. packages should be loaded at top of script so its easy to see what has been used/ check if updated
+  2. easiest way to include data is to use dput() to generate the R code needed to recreate it. For example, to recreate the mtcars dataset in R, perform the following steps:
+
+    Run dput(mtcars) in R
+    Copy the output
+    In reprex, type mtcars <-, then paste.
+try to use smaller subset of data that still reveals problem 
+3. ensure code formatting is easy to read 
