@@ -148,4 +148,413 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
   geom_point(aes(color = class)) + 
   geom_smooth()
 ```
+Can use same idea to specify different data for each layer 
+Here, use red points + open circles to denot 2 seater cars
+Local argument data in geom_point() overrides global data argument in ggplot() for that layer only:
+```{r 2 SEATER = RED OPEN CIRCLE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_point(
+    data = mpg |> filter(class == "2seater"), 
+    colour = "red"
+  ) +
+  geom_point(
+    data = mpg |>  filter(class == "2seater"),
+    shape = "circle open", size = 3, colour = "red"
+  )
+```
+Following histogram and density plot reveals distribution of highway mileage is bimodal + skewed to right 
+Box plot reveals 2 potential outliers:
+```{r HISTOGRAM/ DENSITY/ BOXPLOT}
+# Left
+ggplot(mpg, aes(x = hwy)) +
+  geom_histogram(binwidth = 2)
+
+#Middle
+ggplot(mpg, aes(x = hwy)) +
+  geom_density()
+
+#Right
+ggplot(mpg, aes(x = hwy)) +
+  geom_boxplot()
+```
+
+ggplot has a lot of plots but doesnt have them all, other packages also exit like ggridges
+ggridges = useful for ridgeline plots - useful for visualising desnity of numerical variable for different levels of a categorical variable:
+```{r GGRIDGES}
+library(ggridges)
+
+ggplot(mpg, aes(x = hwy, y = drv, fill = drv, color = drv)) +
+  geom_density_ridges(alpha = 0.5, show.legend = FALSE)
+#> Picking joint bandwidth of 1.28
+```
+
+### Exercises
+1. What geom would you use to draw a line chart? A boxplot? A histogram? An area chart?:
+line = geom_line
+boxplot = geom_boxplot
+histogram = geom_histogram
+area chart = geom_area
+
+2. Earlier in this chapter we used show.legend without explaining it:
+```{r 2}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(color = drv), show.legend = FALSE)
+```
+What does show.legend = FALSE do here? What happens if you remove it? Why do you think we used it earlier?
+controls whether the smooth line and its confidence interval are included in the plot legend. If FALSE, excluded from plot legend In this case, removed legend for smooth lines coloured according to drv
+
+3. What does the se argument to geom_smooth() do?
+display confidence interval around smooth line, can remove with se = FALSE
+
+4. Recreate the R code necessary to generate the following graphs. Note that wherever a categorical variable is used in the plot, it’s drv.
+```{r 4a}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_smooth(se = FALSE)
+```
+```{r 4b}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(aes(group = drv), se = FALSE) +
+  geom_point()
+```
+```{r 4C}
+ggplot(mpg, aes(x = displ, y = hwy, colour = drv)) +
+  geom_smooth(se = FALSE) +
+  geom_point()
+```
+```{r 4d}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_smooth(se = FALSE) +
+  geom_point(aes(colour = drv))
+```
+```{r 4e}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(colour = drv)) +
+  geom_smooth(aes(linetype = drv), se = FALSE)
+```
+```{r 4F}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(size = 4, colour = "white") +
+  geom_point(aes(colour = drv))
+```
+
+
+### Facets
+facet_wrap = splits plot into subplots that each display 1 subset of data based on categorical variable 
+```{r FACET WRAP}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_wrap(~cyl)
+```
+To facet plot with combination of 2 variables, use facet_grid
+first argument of facet grid also a formula  BUT now doublse sided- row ~ column
+```{r FACET_GRID}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl)
+```
+all facets share same scale and range for axis- useful when wanting to compare data across facets BUT can be limiting when wanting to visualise relationship within each facet better
+setting scales argument in faceting function to "free_x" will allow for different scales of x-axis across columns
+"free_y" = will allow for different scales on y-axis across rows
+" free " will allows both:
+```{r FREE}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  facet_grid(drv ~ cyl, scales = "free")
+```
+
+### Exercises
+1. What happens if you facet on a continuous variable?
+```{r 1}
+ggplot(mpg, aes(x = drv, y = cyl)) +
+  geom_point() +
+  facet_wrap(~hwy)
+```
+1 facet per unique value of continuous variable
+
+2. What do the empty cells in the plot above with facet_grid(drv ~ cyl) mean? Run the following code. How do they relate to the resulting plot?
+```{r 2}
+ggplot(mpg) + 
+  geom_point(aes(x = drv, y = cyl))
+```
+facets empty where there is no data eg) front wheel drive and 5 cylinders- no observations of this category
+
+3. What plots does the following code make? What does . do?
+```{r 3}
+ggplot(mpg) +      #a
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+ggplot(mpg) +       #b
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(. ~ cyl)
+```
+a = . = don't facet across columns
+b = . = don't facet across rows 
+in general, full stop means keep everything together
+
+4. Take the first faceted plot in this section:
+```{r 4}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) + 
+  facet_wrap(~ cyl, nrow = 2)
+```
+What are the advantages to using faceting instead of the color aesthetic? What are the disadvantages? How might the balance change if you had a larger dataset?:
+Advantages = see each class of car easily without variables being plotted over one another
+Disadvanatges = harder to compare different variables when in different plots, colour can also help easily distinguish variables
+```{r 4- HIGHLIGHTING FACET PLOTS}
+# facet
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) + 
+  facet_wrap(~ class, nrow = 2)
+
+# color
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy, color = class))
+
+# both
+ggplot(mpg) + 
+  geom_point(
+    aes(x = displ, y = hwy, color = class), 
+    show.legend = FALSE) + 
+  facet_wrap(~ class, nrow = 2)
+
+# highlighting
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(color = "gray") +
+  geom_point(
+    data = mpg |> filter(class == "compact"),
+    color = "pink"
+  )
+```
+
+5. Read ?facet_wrap. What does nrow do? What does ncol do? What other options control the layout of the individual panels? Why doesn’t facet_grid() have nrow and ncol arguments?
+nrow = number of rows
+ncol = number of columns 
+facet_grid doesnt have this as the rows and columns in this argument are preset by the 2 conditional variables 
+
+6. Which of the following plots makes it easier to compare engine size (displ) across cars with different drive trains? What does this say about when to place a faceting variable across rows or columns?
+```{r 6}
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() +       #a
+  facet_grid(drv ~ .)
+
+ggplot(mpg, aes(x = displ)) + 
+  geom_histogram() +             #b
+  facet_grid(. ~ drv)
+```
+a is an easier plot to read to determine the relationship between engine size and drive trains= axis plotting displ shared across all panels
+if a comparison needs to be made on a given variable, that variable should be placed on a shared axis 
+
+7. Recreate the following plot using facet_wrap() instead of facet_grid(). How do the positions of the facet labels change?
+```{r 7}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_grid(drv ~ .)
+
+
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_wrap(drv ~ .)
+```
+facet_grid chose to use rows automatically. facet_wrap chose columns but can be changed to rows:
+```{r}
+ggplot(mpg) + 
+  geom_point(aes(x = displ, y = hwy)) +
+  facet_wrap(drv~., nrow = 3)
+```
+
+### Statistical Transformations
+ chart shows that more diamonds are available with high quality cuts than with low quality cuts:
+```{r}
+ggplot(diamonds, aes(x = cut)) + 
+  geom_bar()
+```
+ x axis = cut- variable in diamond package, y axis = count- NOT available on diamond package - how did it get there 
+ graphs like scatterplots can only plot raw values in given dataset
+ others like bar charts are able to calculate new values to plot:
+
+
+    1.Bar charts, histograms, and frequency polygons bin your data and then plot bin counts, the number of points that fall in each bin.
+
+    2.Smoothers fit a model to your data and then plot predictions from the model.
+
+    3.Boxplots compute the five-number summary of the distribution and then display that summary as a specially formatted box.
+
+algorithm used to calculate new values for a graph = stat
+can see what geom uses what defaults stat value - for geom_ bar = stat_count - computes 2 new variable - count and prop
+each geom has a default stat and vice versa - usually can use a geom without worrying about stat but 3 reasons y may need to state a stat specifically:
+    1. might want to override default stat eg) change fromn count to identity:
+```{r CHANGING DEFAULT STAT}
+diamonds |>
+  count(cut) |>
+  ggplot(aes(x = cut, y = n)) +
+  geom_bar(stat = "identity")
+```
+  2. Might want to override default mapping from transformed variables to aesthetics eg) display bar chart of proportions rather than counts:
+```{r CHANGE DEFAULT MAPPING}
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) + 
+  geom_bar()
+```
+To find the possible variables that can be computed by the stat, look for the section titled “computed variables” in the help for geom_bar().
+  3. Draw greater attentions to statistical transformation in code eg)use stat_summary (sumnmarises y values for each unique x value) to draw attention to summary being computed:
+```{r DRAW ATTENTION TO STATISTICAL TRANSFORMATION}
+ggplot(diamonds) + 
+  stat_summary(
+    aes(x = cut, y = depth),
+    fun.min = min,
+    fun.max = max,
+    fun = median
+  )
+```
+  
+### Exercises
+1. What is the default geom associated with stat_summary()? How could you rewrite the previous plot to use that geom function instead of the stat function:
+Default = geom_pointrange()
+
+2. What does geom_col() do? How is it different from geom_bar()?
+geom_col = plots bar height to represent values in data - can be used to make bar plot from data frame representing frequency table
+geom_bar = calculates height from data and then plots - can be used to make bar chart from data where each row is an observation
+
+3. Most geoms and stats come in pairs that are almost always used in concert. Make a list of all the pairs. What do they have in common?
+geom 	                            stat
+geom_bar() 	                      stat_count()
+geom_bin2d() 	                    stat_bin_2d()
+geom_boxplot() 	                  stat_boxplot()
+geom_contour_filled() 	          stat_contour_filled()
+geom_contour()                  	stat_contour()
+geom_count() 	                    stat_sum()
+geom_density_2d() 	              stat_density_2d()
+geom_density() 	                  stat_density()
+geom_dotplot() 	                  stat_bindot()
+geom_function()                  	stat_function()
+geom_sf()                       	stat_sf()
+geom_sf()                       	stat_sf()
+geom_smooth() 	                  stat_smooth()
+geom_violin() 	                  stat_ydensity()
+geom_hex() 	                      stat_bin_hex()
+geom_qq_line() 	                  stat_qq_line()
+geom_qq() 	                      stat_qq()
+geom_quantile()                  	stat_quantile()
+
+4. What variables does stat_smooth() compute? What arguments control its behavior?
+after_stat(y) or after_stat(x)
+Predicted value.
+
+after_stat(ymin) or after_stat(xmin)
+Lower pointwise confidence interval around the mean.
+
+after_stat(ymax) or after_stat(xmax)
+Upper pointwise confidence interval around the mean.
+
+after_stat(se)
+Standard error.
+
+5. In our proportion bar chart, we needed to set group = 1. Why? In other words, what is the problem with these two graphs
+```{r 5}
+ggplot(diamonds, aes(x = cut, y = after_stat(prop))) +    #a
+  geom_bar()
+ggplot(diamonds, aes(x = cut, y = after_stat(prop), group = 1)) +
+  geom_bar()
+
+ggplot(diamonds, aes(x = cut, fill = color, y = after_stat(prop))) +    #b
+  geom_bar()
+ggplot(diamonds, aes(x = cut, fill = color, y = after_stat(prop), group = color)) +
+  geom_bar()
+```
+a = group = 1 results in marginal proportion of cuts being plotted 
+b = group = colour = proportion of of colours within each cut being plotted 
+
+### Position Adjustments
+Can colour bar charts either by fill() or colour():
+```{r FILL AND COLOUR}
+# Left
+ggplot(mpg, aes(x = drv, color = drv)) + # colours outline
+  geom_bar()
+
+# Right
+ggplot(mpg, aes(x = drv, fill = drv)) + 
+  geom_bar()
+```
+map  fill aesthetic to another variable, like class: the bars are automatically stacked. Each coloured rectangle represents a combination of drv and class.
+```{r DRV-CLASS COMBO}
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar()
+```
+
+Stacking performed automatically by position adjustment - specified by position argument
+if don't want stacked bar chart, can use : "identity", "dodge" or "fill".
+ 1.position = "identity" = place each object exactly where it falls in context of graph - not useful for bars as it overlaps them - to see  overlapping, either need to make the bars slightly transparent by setting alpha to a small value, or completely transparent by setting fill = NA.
+```{r POSITION = IDENTITY}
+# Left
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(alpha = 1/5, position = "identity")
+
+# Right
+ggplot(mpg, aes(x = drv, color = class)) + 
+  geom_bar(fill = NA, position = "identity")
+```
+Identity position adjustment is more useful for 2d geoms,
+
+2. position = "fill"  = works like stacking BUT makes each set of stacked bars same height - easier to compare proportions across groups
+
+3. position = "dodge" places overlapping objects directly beside one another. This makes it easier to compare individual values.
+```{r POSITION = DODGE}
+# Left
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(position = "fill")
+
+# Right
+ggplot(mpg, aes(x = drv, fill = class)) + 
+  geom_bar(position = "dodge")
+```
+
+Another type of adjustment not useful for bar plots but are for scatterplots:
+issue with overplotting- underlying values rounded so many points overlap each other - hard to see distribution of data 
+can avoid by setting adjustment to "jitter"- adds small amount of random noise to each point- spreads point out as no 2 points likely to recieve same amount of noise:
+```{r POSITION = JITTER}
+ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point(position = "jitter")
+```
+Makes graph less accurate on a small scale but much more revealing on a larger scale 
+ggplot2 comes with a shorthand for geom_point(position = "jitter"): geom_jitter().
+
+### Exercises
+1.  What is the problem with the following plot? How could you improve it?:
+```{r 1}
+ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point()
+
+#Fix
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_jitter()
+```
+overplotting - many cars in same city have same mileage - fix with jitter
+
+2.What, if anything, is the difference between the two plots? Why?
+```{r 2}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(position = "identity")
+```
+plots are identical
+
+3. What parameters to geom_jitter() control the amount of jittering?
+width and height parameters control amount of horizontal/vertical displacement
+higher values = more displacement
+
+4. Compare and contrast geom_jitter() with geom_count().
+jitter = adds random noise random noise to location of points to avoid overplotting
+count = sizes points based on number of observations at given location 
+
+5. What’s the default position adjustment for geom_boxplot()? Create a visualization of the mpg dataset that demonstrates it.
+default is position for geom_boxplot() is "dodge2".
+```{r 5}
+ggplot(mpg, aes(x = cty, y = displ)) +
+  geom_boxplot()  
+ggplot(mpg, aes(x = cty, y = displ)) +
+  geom_boxplot(position = "dodge2")
+```
 
