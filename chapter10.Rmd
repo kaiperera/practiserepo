@@ -1,0 +1,122 @@
+---
+title: "chapter10"
+output: html_document
+date: "2025-02-05"
+---
+#### Exploratory data analysis
+### Variation
+defined = tendency of variable's values to change from measurement to measurement
+measure any continuous variable 2x = 2 different results
+Each measuremetn icnludes small amount of error varying between elements
+Variables also vary if measuring across different subjects/ different times
+Each variable has different pattern of variation- insight into how it varies between measurements on same observation and across observations
+
+visualizing the distribution of weights (carat) of ~54,000 diamonds from the diamonds dataset. Since carat is a numerical variable,  can use a histogram:
+```{r VARIATION CARAT HISTOGRAM}
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = 0.5)
+```
+## Typical Values
+Both bar hcarts and histograms = tall bars -> more common values of a variable - places w no bars suggest values not seen in data
+To turn this information into useful questions, look for anything unexpected:
+  \1. which values more common and y?
+ \2. which values rare? Does this match expectations?
+  \3. any unusual patterns? what might explain them? 
+  
+Look at distribution for carat for smaller diamonds:
+```{r CARAT SMALLER DIAMONDS}
+smaller <- diamonds |> 
+  filter(carat < 3) 
+
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram(binwidth = 0.01)
+```
+Potential Questions:
+why are there more diamonds at whole carats (eg. 1, 2) and common fractions of caracts (0.5) 
+why are there more diamonds slightly to the right of each larger peak than to the left 
+
+visualisations can also reveal clusters - suggests subgroups exist in data. To understand subgroups, need to ask:
+\How are observations in each subgroup similar to each other?
+\How are observations in separate clusters different to each other?
+\How can clusters be explained / described?
+\Why might cluster appearance seem misleading?
+
+some questions can be answered by data alone whereas others need domain expertise
+explore relationships between variables
+
+## Unusual Values
+Outliers can be data entry errors, extreme values observed within data OR could suggest important new discoveries.
+When there is a lot of data, outliers sometimes hard to see in histogram
+eg) take the distribution of the y variable from the diamonds dataset. The only evidence of outliers is the unusually wide limits on the x-axis.
+```{r DIAMOND OUTLIER}
+ggplot(diamonds, aes(x = y)) + 
+  geom_histogram(binwidth = 0.5)
+```
+so many observations in common bins that rare bind v short  - hard to see them 
+to make it easier to see unusual values, zoom small values of y axis with coord_cartesian():
+```{r ZOOM}
+ggplot(diamonds, aes(x = y)) +
+  geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0,50))
+```
+coord_cartesian also has xlim() in case need to zoom into x axis.
+ggplot2 also has xlim and ylim functions but work differently - throw data away outside the limits
+Allows us to see there are 3 unusual values: 0, ~30 and ~60- pluck out with dplyr:
+```{r OUTLIERS PLUCKED OUT}
+unusual <- diamonds |> 
+  filter(y < 3 | y > 20) |> 
+  select(price, x, y, z) |>
+  arrange(y)
+unusual
+```
+y variable measures 1 of 3 dimensions for diamonds in mm - diamonds cant have a width of 0 so these values must be wrong 
+By doing EDA, discovered missing data coded for as 0 that woulds have been found if only searching for N/As - might  want to recode these values as N/As to prevent misleading calculations
+Might also suspect 32mma and 59mm are incorrect- massive but cheap
+good to repeat analysis with and without outliers - if have minimal effect on result and can't figure out y they r there, safe to omit BUT if substantial effect, shouldnt drop without justification
+
+##Exercises
+1. Explore the distribution of each of the x, y, and z variables in diamonds. What do you learn? Think about a diamond and how you might decide which dimension is the length, width, and depth.
+```{r 1}
+ggplot(diamonds, aes(x = x)) +
+  geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+
+ggplot(diamonds, aes(x = z)) +
+   geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+
+ggplot(diamonds, aes(x = y)) +
+  geom_histogram(binwidth = 0.5) +
+  coord_cartesian(ylim = c(0,50))
+```
+x = length, y = width, z = depth
+the distribution of x primarily ranges from ~3 - ~10mm, with some outliers at the 0 mark. the distribution of z is <10, with values between ~1- ~8mm. There is an outlier at ~35mm and another at the 0mm mark
+The distributions for the z and y variables seem very similar, whilst x is noticeably different with regards to distribution. 
+
+2. Explore the distribution of price. Do you discover anything unusual or surprising? (Hint: Carefully think about the binwidth and make sure you try a wide range of values.)
+```{r 2}
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(binwidth = 850)
+
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram(binwidth = 850) +
+coord_cartesian(xlim = c(0,5000)) 
+  
+
+```
+It seems as thought the majority of diamonds surveyed tend to be prices below 5,000, especially within the ~500 - ~1200 range. As price increases, the frequency decreases.This makes sense as diamonds percieved as more desirable tend to be rare, relating to carat, clarity and/or size, and thus are more expensive. 
+
+3. How many diamonds are 0.99 carat? How many are 1 carat? What do you think is the cause of the difference?
+```{r 3}
+ggplot(diamonds, aes(x = carat)) +
+  geom_histogram() +
+  coord_cartesian(xlim = c(0.8,1))
+```
+there is no observable difference, both 0.99 and 1 carat diamonds both have a count of ~7500
+
+4. Compare and contrast coord_cartesian() vs. xlim() or ylim() when zooming in on a histogram. What happens if you leave binwidth unset? What happens if you try and zoom so only half a bar shows?
+xlim = zooms in using the x axis - in this case can only see values in the range of 0.8 and 1 with regards to carat
+ylim = same as xlim but on y axis
+leaving binwidth empty means ggplot automatically determines a default bin based on the range and distribution of the given data
+
+### More Unusual Values
