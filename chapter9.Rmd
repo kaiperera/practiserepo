@@ -558,3 +558,56 @@ ggplot(mpg, aes(x = cty, y = displ)) +
   geom_boxplot(position = "dodge2")
 ```
 
+### Coordinate Systems
+default - cartesian system- x and y points act independently to deteminne point location
+2 other important systems:
+1) coord_quickmap() = sets aspect ratio correctly for geographic maps- important if plotting spatial data
+```{r COORD_QUICKMAP}
+nz <- map_data("nz")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black")
+
+ggplot(nz, aes(x = long, y = lat, group = group)) +
+  geom_polygon(fill = "white", color = "black") +
+  coord_quickmap()
+```
+2) coord_polar() = uses polar coordinates - reveal connection between bar chart and Coxcomb chart 
+```{r COORD_POLAR}
+bar <- ggplot(data = diamonds) + 
+  geom_bar(
+    mapping = aes(x = clarity, fill = clarity), 
+    show.legend = FALSE,
+    width = 1
+  ) + 
+  theme(aspect.ratio = 1)
+
+bar + coord_flip()
+bar + coord_polar()
+```
+
+## Exercises
+1. Turn a stacked bar chart into a pie chart using coord_polar():
+```{r 1}
+ggplot(diamonds, aes(x = "", fill = cut)) +
+  geom_bar()    # stacked
+
+
+ggplot(diamonds, aes(x = "", fill = cut)) +
+  geom_bar()+
+  coord_polar(theta = "y")
+```
+
+### Layered Grammar of Graphics:
+can expand on graphing template by including positions adjustments, stats, faceting and coordinate systems:
+```{r GRAPHING TEMPLATE}
+ggplot(data =  DATA) +
+  GEOM_FUNCTION(
+    mapping = aes(MAPPING), 
+    stat = STAT,
+    position = POSITION
+  ) + 
+  COORDINATE_FUNCTION +
+  FACET_FUNCTION
+```
+
