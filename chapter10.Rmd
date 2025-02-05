@@ -120,3 +120,249 @@ ylim = same as xlim but on y axis
 leaving binwidth empty means ggplot automatically determines a default bin based on the range and distribution of the given data
 
 ### More Unusual Values
+If encountered unusual data and simply want to move on, have 2 options:
+  \1. drop entire row of strange values:
+```{r DROP}
+diamonds2 <- diamonds |> 
+  filter(between(y, 3, 20))
+```
+not ideal - 1 invalid value doesnt imply all other observations from this value r also invalid
+  \2. Replace unusual values with missing values - easiest way is to mutate and replace variable with modified copy - can use if_else() function to replace unusualy values with N/A:
+```{r REPLACE}
+diamonds2 <- diamonds |> 
+  mutate(y = if_else(y < 3 | y > 20, NA, y))
+```
+not obvious where missing points should be plotted so ggplot removes them but has a warning message:
+```{r WARNING}
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point()
+```
+
+to suppress warning, na.rm = TRUE:
+```{r SUPPRESS WARNING}
+ggplot(diamonds2, aes(x = x, y = y)) + 
+  geom_point(na.rm = TRUE)
+```
+
+May want to understand what makes observations with missing values different to those w recorded values
+eg) nycflights13::flights -> missing values in dep_time variable indicates flight was cancelled
+might want to compare scheduled departure times for cancelled and non-cancelled times - can do by making new variable, using is.na() to check if dep_time() is missing:
+```{r COMPARE DEP_TIME FOR CANCELLED AND NON CANCELLED }
+nycflights13::flights |> 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)
+  ) |> 
+  ggplot(aes(x = sched_dep_time)) + 
+  geom_freqpoly(aes(colour = cancelled), binwidth = 1/4)
+```
+plot not great as more non-cancelled flights than cancelled flights
+
+##Exercises
+1. What happens to missing values in a histogram? What happens to missing values in a bar chart? Why is there a difference in how missing values are handled in histograms and bar charts?:
+Histograms = N/As automatically ignored
+Bar Chart = N/As grouped together in separate category
+Histograms group continuous numeric data into bins and missing values can't be grouped into any bin. Bar charts count categorical data and so missing values are treated like an additional group
+
+2. What does na.rm = TRUE do in mean() and sum()?
+Mean = computes mean, ignoring N/As
+Sum = computes sum, ignoring N/As
+
+3. Recreate the frequency plot of scheduled_dep_time colored by whether the flight was cancelled or not. Also facet by the cancelled variable. Experiment with different values of the scales variable in the faceting function to mitigate the effect of more non-cancelled flights than cancelled flights.
+```{r 3}
+nycflights13::flights |> 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)
+  ) |> 
+  ggplot(aes(x = sched_dep_time, colour = cancelled)) + 
+  geom_freqpoly(binwidth = 1/4) +
+  facet_wrap(~cancelled)
+```
+
+### Covariation
+Describes behaviour between variables- tendency for values of 2 + variables to vary together in a related way
+best way to spot covariation is to visualise relationship between 2+ variables
+
+##Categorical and Numerical variables:
+diamond price varies with quality (measured by cut):
+```{r CATEGORICAL/NUMERICAL}
+ggplot(diamonds, aes(x = price)) +
+  geom_freqpoly(aes(colour = cut), binwidth = 500, linewidth = 0.75)
+```
+default appearance not useful here as height (determined by overall count) differs a lot across cuts - hard to see differences in distribution shapes
+To make easier comparison, need to swap what is displayed on y axis - instead of count, will display density = count standardised so area under frequency polygon is 1:
+```{r COUNT -> DENSITY}
+ggplot(diamonds, aes(x = price, y = after_stat(density))) + 
+  geom_freqpoly(aes(color = cut), binwidth = 500, linewidth = 0.75)
+```
+mapping density to y BUT density not a variable in dataset so calculating it w the after_stat() argument
+According to plot, lowest quality diamonds have highest price - frequency polygons can be hard to interpret
+visually simpler plot for exploring this would be a side - by - side boxplot:
+```{r SIDE BY SIDE BP}
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_boxplot()
+```
+Less info about distribution BUT boxplots more compact = easier comparison 
+Supports counter-intuitive idea that lower quality diamonds are more expensive on average
+Cut is an ordered variable (fair worse than good, good worse than v.good etc)- most categorical variables aren't so ordered 
+reorder them  via fct_reorder():
+```{r REORDER CATEGORICAL VARIABLE}
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_boxplot()
+
+#to make it easier to see:
+ggplot(mpg, aes(x = fct_reorder(class, hwy, median), y = hwy)) +
+  geom_boxplot()
+```
+If have long variable names, geom_boxplot better  if flipped 90 degrees- can do by swapping x and y aesthetic mappings:
+```{r FLIP FOR LONG VARIABLE NAMES}
+ggplot(mpg, aes(x = hwy, y = fct_reorder(class, hwy, median))) +
+  geom_boxplot()
+```
+# Exercises
+1. Use what you’ve learned to improve the visualization of the departure times of cancelled vs. non-cancelled flights.
+```{r 1}
+nycflights13::flights |> 
+  mutate(
+    cancelled = factor(is.na(dep_time), labels = c("Not Cancelled", "Cancelled")), ## had to change into factor, original logical TRUE / FALSE argument
+    sched_hour = sched_dep_time %/% 100,
+    sched_min = sched_dep_time %% 100,
+    sched_dep_time = sched_hour + (sched_min / 60)
+  ) |> 
+ ggplot(aes(x = cancelled, y = sched_dep_time)) + 
+  geom_boxplot() +
+  labs(
+    title = "Scheduled Departure Time Distribution by Flight Cancellation",
+    x = "Flight Status",
+    y = "Scheduled Departure Time (Hours)"
+  ) +
+  theme_minimal()
+```
+2. Based on EDA, what variable in the diamonds dataset appears to be most important for predicting the price of a diamond? How is that variable correlated with cut? Why does the combination of those two relationships lead to lower quality diamonds being more expensive?
+```{r 2}
+ggplot(diamonds, aes(x = price, y = clarity)) +
+  geom_boxplot() 
+
+ggplot(diamonds, aes(x = price, y = color)) +
+  geom_boxplot() 
+
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+
+ggplot(diamonds, aes(x = color, y = carat)) +
+  geom_boxplot()
+```
+clarity - high clarity not equal to high price
+colour = good colour not equal to high price
+carat = not really 
+
+It seems as though the worse colour is, the more expensive the diamond is. In terms of correlating to cut, a lot of the J rated diamonds are also classed as "ideal", making them more expensive. Additionally, the  J rated diamonds have a higher average carat compared to other colours, adding to their increased price. 
+
+
+3. Instead of exchanging the x and y variables, add coord_flip() as a new layer to the vertical boxplot to create a horizontal one. How does this compare to exchanging the variables?
+```{r 3}
+ggplot(mpg, aes(x = hwy, y = fct_reorder(class, hwy, median))) +
+  geom_boxplot()
+
+
+ggplot(mpg, aes(x = fct_reorder(class, hwy, median), y = hwy)) +
+  geom_boxplot() +
+  coord_flip()
+```
+does the same thing
+
+4. One problem with boxplots is that they were developed in an era of much smaller datasets and tend to display a prohibitively large number of “outlying values”. One approach to remedy this problem is the letter value plot. Install the lvplot package, and try using geom_lv() to display the distribution of price vs. cut. What do you learn? How do you interpret the plots?
+```{r 4}
+ggplot(diamonds, aes(x = cut, y = price)) +
+  geom_lv()
+```
+
+5. Create a visualization of diamond prices vs. a categorical variable from the diamonds dataset using geom_violin(), then a faceted geom_histogram(), then a colored geom_freqpoly(), and then a colored geom_density(). Compare and contrast the four plots. What are the pros and cons of each method of visualizing the distribution of a numerical variable based on the levels of a categorical variable?
+```{r 5}
+#geom violin
+ggplot(diamonds, aes(x = price, y = cut)) +
+  geom_violin()
+
+#faceted geom histogram
+ggplot(diamonds, aes(x = price)) +
+  geom_histogram() +
+  facet_wrap(~cut)
+
+# coloured geom_freqpoly
+ggplot(diamonds, aes(x = price)) +
+  geom_freqpoly(aes(colour = cut))
+
+
+#coloured geom_density
+ggplot(diamonds, aes(x = price, fill = cut)) +
+  geom_density(alpha = 0.5)  # alpha controls transparency
+```
+
+6.If you have a small dataset, it’s sometimes useful to use geom_jitter() to avoid overplotting to more easily see the relationship between a continuous and categorical variable. The ggbeeswarm package provides a number of methods similar to geom_jitter(). List them and briefly describe what each one does.
+geom_beeswarm() = makes beeswarm plot where points spaced to minimize overlap
+geom_quasirandom() = distributed points in a quasi random way - useful for a more organic scatter
+geom_violinswarm() = mix of violin and beeswarm plots - combines violin plot with beeswarm of individual points
+geom_jitterwidth() = adds horizontal jitter to reduce overlap on categorical data
+geom_beeswarm_horizontal() = horziontal beeswarm plot for better visualisation of horizontal data
+
+
+## 2 Categorical Variables:
+to visualise covariation between categorical variables, nned to count no. of observations for each combination of levels in those variables 
+one way to do this is geom_count:
+```{r GEOM_COUNT}
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count()
+```
+Size of each circle on plot correlates to how many observations occurred at each combination of values
+covariation will appear as strong correlation between specific x values and specific y values
+
+Another way = computing counts w dpylr:
+```{r COMPUTING COUNTS WITH DPYLR}
+diamonds |> 
+  count(color, cut)
+```
+
+The visualise w geom_tile and fill:
+```{r GEOM TILE AND FILL}
+diamonds |> 
+  count(color, cut) |>  
+  ggplot(aes(x = color, y = cut)) +
+  geom_tile(aes(fill = n))
+```
+if categorical datas are unordered, might want to use seriation package to simultaneously reorder rows and columns - clearly reveal any patterns 
+Larger plots = heatmaply package, which creates interactive plots
+
+# Exercises:
+1. How could you rescale the count dataset above to more clearly show the distribution of cut within color, or color within cut?
+```{r 1}
+ggplot(diamonds, aes(x = cut, y = color)) +
+  geom_count() +  # Size represents the count
+  scale_size_continuous(range = c(3, 10)) +  # Adjust size range for better visibility
+  labs(title = "Distribution of Cut within Color",
+       x = "Cut",
+       y = "Color") +
+  theme_minimal()
+
+
+
+```
+Rescaling can either be done by adjusting the size of the counts to reflect the distribution or by normalizing the counts to get proportions of each category combination.
+
+2. What different data insights do you get with a segmented bar chart if color is mapped to the x aesthetic and cut is mapped to the fill aesthetic? Calculate the counts that fall into each of the segments.
+```{r 2}
+ggplot(diamonds, aes(x = color, fill = cut)) +
+  geom_bar(position = "fill")
+ggplot(diamonds, aes(x = color, fill = cut)) +
+  geom_bar(position = "dodge")
+```
+
+3.Use geom_tile() together with dplyr to explore how average flight departure delays vary by destination and month of year. What makes the plot difficult to read? How could you improve it?
+```{r 3}
+ggplot()
+```
+
