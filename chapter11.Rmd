@@ -1,0 +1,182 @@
+---
+title: "chapter11"
+output: html_document
+date: "2025-02-07"
+---
+#### Communication
+### Prerequisites
+```{r PREREQUISITES}
+library(tidyverse)
+library(scales)
+library(ggrepel)
+library(patchwork)
+```
+
+### Labels
+When turning exploratory graphic to expository graphic, need good labels
+```{r LABELS}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "Engine displacement (L)",
+    y = "Highway fuel economy (mpg)",
+    color = "Car type",
+    title = "Fuel efficiency generally decreases with engine size",
+    subtitle = "Two seaters (sports cars) are an exception because of their light weight",
+    caption = "Data from fueleconomy.gov"
+  )
+```
+title needs to summarise main finding rather than describing what plot is
+if more text needed, 2 other usfeul labels:
+```
+subtitle = additional detail in smaller font beneath title
+caption = adds text at bottom right of plot - used to describe source of data
+```
+can use labs to replace axis and legend titles - good idea to replace short variable names with more detailed descriptions and to include units
+possible to use mathematical equation instead of text strings - switch "" to quote() 
+```{r MATHS INSTEAD OF TEXT STRING}
+df <- tibble(
+  x = 1:10,
+  y = cumsum(x^2)
+)
+
+ggplot(df, aes(x, y)) +
+  geom_point() +
+  labs(
+    x = quote(x[i]),
+    y = quote(sum(x[i] ^ 2, i == 1, n))
+  )
+```
+
+## Exercises
+1. Create one plot on the fuel economy data with customized title, subtitle, caption, x, y, and color labels.
+```{r 1}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(colour = year)) +
+  geom_smooth() +
+  labs(title = "Fuel economy decreases with engine size",
+       subtitle = "colour denotes year of manufacture",
+       x = "Engine Displacement (L)",
+       y = "Highway Fuel Economy (mpg)",
+       caption = "mpg dataframe on R")
+```
+
+2. Recreate the following plot using the fuel economy data. Note that both the colors and shapes of points vary by type of drive train.
+```{r 2}
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point(aes(colour = drv, shape = drv)) +
+  labs (
+    x = "City MPG",
+    y = "Highway MPG",
+    colour = "Type of drive train",
+    shape = "Type of drive train"
+  )
+```
+
+### Annotations
+also useful to label individual/ groups of observations :
+```
+geom_text - similar to geo_point BUT has additional aesthetic: label - possible to add textual labels to plots
+```
+2 possible label sources:
+
+1. tibble provides labels
+following plot oulls out cars w highest engine size in each drive type and save their info as new df
+
+```{r TIBBLE PROVIDES LABELS- DF CREATION}
+label_info <- mpg |>
+  group_by(drv) |>
+  arrange(desc(displ)) |>
+  slice_head(n = 1) |>
+  mutate(
+    drive_type = case_when(
+      drv == "f" ~ "front-wheel drive",
+      drv == "r" ~ "rear-wheel drive",
+      drv == "4" ~ "4-wheel drive"
+    )
+  ) |>
+  select(displ, hwy, drv, drive_type)
+```
+use this new df to directly label 3 groups to replace legend with labels placed directly onto plot
+using fontface and size arguments - customise look of text labels - larger than res of text on plot and bolded
+(theme(legend.position = "none")) turns off all legends
+```{r TIBBLE PROVIDES LABELS - PLOT}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE) +
+  geom_text(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type),
+    fontface = "bold", size = 5, hjust = "right", vjust = "bottom"
+  ) +
+  theme(legend.position = "none")
+```
+hjust = horizontal justification
+vjust = vertical justification 
+control label alignments
+
+BUT annoated plot made above hard to read as labels overlap with each other/ points
+can use geom_label_repel from ggrepel to address both issues - automatically adjusts labels so they don't overlap:
+```{r LABEL REPEL}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE) +
+  geom_label_repel(
+    data = label_info, 
+    aes(x = displ, y = hwy, label = drive_type),
+    fontface = "bold", size = 2, nudge_y = 5
+  ) +
+  theme(legend.position = "none")
+```
+can also use same idea to highlight certain points on plot with geom_text_repel from ggrepel
+another useful technique = added second layer of large hollow points to further highlight labelled points:
+```{r GEOM TEXT REPEL}
+potential_outliers <- mpg |> 
+  filter(hwy > 40 | (hwy > 20 & displ > 5)) 
+
+
+  ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_text_repel(data = potential_outliers, aes(label = model)) +
+  geom_point(
+    data = potential_outliers,
+    colour = "red", size = 3, shape = "circle open")
+```
+other geoms help with plot annotating:
+```
+geom_hline/ geom_vline = add reference lines - usually thhick (linewidth = 2) and white - drawn underneath primary data layer for ease
+
+geom_rect = draw rectangle around points of interest - boundaries of rectangle defined by aesthetics xmin, xmax, ymin, ymax 
+ALT: ggforce package - geom_mark_hull = allows annotation of subsets of points with hulls
+
+geom_segment = with arrow argument to draw attention to point with an arrow - use aesthetics x and y to define starting location - xend and yend define end of location
+```
+
+annotate function- geoms generally useful for highlighting subset of data vs annotate() = useful for adding one or few annotation elements to a plot
+to demonstrate, add text to plot- text long so using stringr::str_wrap() to automatically add line breaks to it given the number of characters wanted per line:
+```{r ANNOTATE()}
+trend_text <- "Larger engine sizes tend to have lower fuel economy" |> 
+  str_wrap(width = 30)
+
+trend_text
+```
+Then add 2 layers of annotation- 1 w label geom and other with segment geom
+x and y aesthetics in both define where annotations shoudl start, and xend and yend aesthetics in segment annotation define end location of the segment- also styled as an arrow
+```{r 2 ANNOTATION LAYERS}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  annotate(
+    geom = "label", x = 3.5, y = 38,
+    label = trend_text, 
+    hjust = "left",  colour = "red"
+     ) +
+  annotate(
+    geom = "segment", 
+    x = 3, y = 35, xend = 5, yend = 25, colour = "red", 
+    arrow = arrow(type = "closed")
+  )
+```
+
+## Exercises
+1. Use geom_text() with infinite positions to place text at the four corners of the plot
