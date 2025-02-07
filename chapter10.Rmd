@@ -19,10 +19,10 @@ ggplot(diamonds, aes(x = carat)) +
 ## Typical Values
 Both bar hcarts and histograms = tall bars -> more common values of a variable - places w no bars suggest values not seen in data
 To turn this information into useful questions, look for anything unexpected:
-  \1. which values more common and y?
- \2. which values rare? Does this match expectations?
-  \3. any unusual patterns? what might explain them? 
-  
+ ``` 1. which values more common and y?
+ 2. which values rare? Does this match expectations?
+  3. any unusual patterns? what might explain them? 
+  ```
 Look at distribution for carat for smaller diamonds:
 ```{r CARAT SMALLER DIAMONDS}
 smaller <- diamonds |> 
@@ -36,11 +36,11 @@ why are there more diamonds at whole carats (eg. 1, 2) and common fractions of c
 why are there more diamonds slightly to the right of each larger peak than to the left 
 
 visualisations can also reveal clusters - suggests subgroups exist in data. To understand subgroups, need to ask:
-\How are observations in each subgroup similar to each other?
-\How are observations in separate clusters different to each other?
-\How can clusters be explained / described?
-\Why might cluster appearance seem misleading?
-
+```How are observations in each subgroup similar to each other?
+How are observations in separate clusters different to each other?
+How can clusters be explained / described?
+Why might cluster appearance seem misleading? 
+```
 some questions can be answered by data alone whereas others need domain expertise
 explore relationships between variables
 
@@ -150,7 +150,7 @@ might want to compare scheduled departure times for cancelled and non-cancelled 
 ```{r COMPARE DEP_TIME FOR CANCELLED AND NON CANCELLED }
 nycflights13::flights |> 
   mutate(
-    cancelled = is.na(dep_time),
+    cancelled = is.na(dep_time),   #is.na() is a function in R that checks if a value is missing (NA). It returns TRUE if a value is missing and FALSE if it is no
     sched_hour = sched_dep_time %/% 100,
     sched_min = sched_dep_time %% 100,
     sched_dep_time = sched_hour + (sched_min / 60)
@@ -363,6 +363,116 @@ ggplot(diamonds, aes(x = color, fill = cut)) +
 
 3.Use geom_tile() together with dplyr to explore how average flight departure delays vary by destination and month of year. What makes the plot difficult to read? How could you improve it?
 ```{r 3}
-ggplot()
+flight_delays <- flights |> 
+  filter(!is.na(dep_delay)) |> 
+  group_by(dest, month) |> 
+  summarise(avg_dep_delay = mean(dep_delay, na.rm = TRUE), .groups = "drop")  #process flight data
+
+# create map
+ggplot(flight_delays, aes(x = month, y = dest, fill = avg_dep_delay)) +
+  geom_tile() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(title = "Average Departure Delay by Destination and Month",
+       x = "month",
+       y = "destination",
+       fill = "average delay (mins") +
+  theme_minimal() +
+  scale_y_discrete(guide = guide_axis(n.dodge = 2)) # spreads out labels
 ```
 
+this plot is hard to read due to the large number of destinations, maxing the y axis cluttered. Although scale_y_discrete was used, it separated out the labels such that it is hard to determine which tile correlates to which y axis variable. Additionally, the small tile size makes it hard to read and the colour scale may be hard to interpret
+
+
+## 2 Numerical Variables
+scatter plot via geom_point - can see covariation as patter in points 
+eg) positive relationship between carat size and diamond price:
+```{r POSITIVE RELATIONSHIP CARAT AND PRICE}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point()
+```
+scatterplots become less usedful as dataset size groqa - points overplot and pile up - hard to judge differences in density / spot trends
+one way to fix is alpha aesthetic- transparency:
+```{r ALPHA FOR TRANSPARENCY}
+ggplot(diamonds, aes(x = carat, y = price)) + 
+  geom_point(alpha = 1 / 100)
+```
+transparency can be challenginf for large datasets
+can also use bin- used in 1D for histograms and freqpoly but here use geom_bin2d and geom_hex for 2D
+these divide coordinates into 2d bins and use a fill colour to display how many points fall within each bin
+bin2d creates rectangular bins vs hex makes hexagonal bins- need to install hexbin package
+```{r BIN2D AND HEXBIN}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_bin2d()
+
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_hex()
+```
+can also bin 1 continuous variable so it acts like a categorical variable - can then use a technique for visualising categorical-continuous combo 
+eg) bin carat and then display boxplot for each group
+```{r COMBO}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_boxplot(aes(group = cut_width(carat, 0.1)))
+```
+cut_width(x, width) = divides x bins of specified width
+by default, boxplots look roughly the same except number of outliers regardless of how many observations there are - hard to tell that each boxplot summarises different number of points
+one way to show that width of boxplot is proportional to number of points is varwidth = TRUE
+
+# Exercises
+1. Instead of summarizing the conditional distribution with a boxplot, you could use a frequency polygon. What do you need to consider when using cut_width() vs. cut_number()? How does that impact a visualization of the 2d distribution of carat and price?
+```{r 1}
+# cut_width
+ggplot(diamonds, aes(x = carat, colour = cut_width(carat, 0.2))) +
+  geom_freqpoly(stat = "bin", binwidth = 0.2) +
+  labs(title = "frequency polygon of carat",
+       x = "carat",
+       y = "count")
+
+#cut_number
+ggplot(diamonds, aes(x = carat, colour = cut_number(carat, 10)))+  # 10 obs per bin
+  geom_freqpoly(stat = "bin", bins = 10) +
+  labs(title = "frequency polygon of carat",
+       x = "carat",
+       y = "count")
+
+
+```
+
+
+cut_width = creates bins of equal width eg) every 0.5 carat- useful when wanting consistent interval size across range BUT may lead to uneven sample sizes per bin if data unevenly distributed
+Bins equally spaced along x axis and can reveal trends over fixed interval - may result in some bins having very few data points eg) rare high carat diamonds
+
+cut_number = creates bins w equal numbers of observations per bin - ensures each bin has ~ same amount of values BUT bin width varies so interpretation can be hard- useful if data highly skewed
+bins have equal number of diamonds - if diamonds mostly lower carat, bins for larger diamonds will be wider - can make visualisation hard to interpret due to inconsistent bin widths 
+
+2.Visualize the distribution of carat, partitioned by price
+```{r 2 histogram}
+# create price bins via cut_number to divide in 5 bins of equal obs
+diamond2 <- diamonds |> 
+  mutate(price_bin = cut_number(price, 5))
+
+#plot carat by price
+ggplot(diamond2, aes(x = carat)) +
+  geom_histogram(binwidth = 0.1, fill = "blue", colour = "green") +
+  facet_wrap(~price_bin, scales = "free_y") +
+  labs(title = "Distribution of carat by price",
+       x = "carat",
+       y = "count")
+#Facet Scaling: Use scales = "free_y" to handle varying counts in each price bin.
+```
+```{r 2 boxplot}
+ggplot(diamond2, aes(x = price_bin, y = carat)) +
+  geom_boxplot() +
+  labs(title = "boxplot of carat by price bin",
+       x = "price bin",
+       y = "carat")
+```
+```{r 2 density plot}
+ggplot(diamond2, aes(x = carat, fill = price_bin)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~price_bin) +
+  labs(title = "density plot of carat by price",
+       x = "carat",
+       y = "density")
+```
+
+3. How does the price distribution of very large diamonds compare to small diamonds? Is it as you expect, or does it surprise you?
