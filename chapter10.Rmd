@@ -476,3 +476,86 @@ ggplot(diamond2, aes(x = carat, fill = price_bin)) +
 ```
 
 3. How does the price distribution of very large diamonds compare to small diamonds? Is it as you expect, or does it surprise you?
+```{r 3}
+diamondsize <- diamonds |> 
+  mutate(diamond_size = ifelse(carat < 1, "small", "large"))
+
+ggplot(diamondsize, aes(x = price, fill = diamond_size)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "price distribution of small and large diamonds",
+       x = "price",
+       y = "density")
+```
+this makes sense, as the larger, rarer diamonds seem to be more expensive than the smaller and more abundant diamonds
+
+4. Combine two of the techniques you’ve learned to visualize the combined distribution of cut, carat, and price.
+```{r 4}
+ggplot(diamonds, aes(x = carat, y= price)) +
+  geom_boxplot(aes(group = cut_width(carat, 0.1))) +
+  facet_wrap(~cut)
+
+```
+
+5. Two dimensional plots reveal outliers that are not visible in one dimensional plots. For example, some points in the following plot have an unusual combination of x and y values, which makes the points outliers even though their x and y values appear normal when examined separately. Why is a scatterplot a better display than a binned plot for this case
+```{r 5}
+diamonds |> 
+  filter(x >= 4) |> 
+  ggplot(aes(x = x, y = y)) +
+  geom_point() +
+  coord_cartesian(xlim = c(4, 11), ylim = c(4, 11))
+```
+scatterplots are better in this case due to the identification of outliers. This is because ach data point's exact position is shown and a relationshio between observations is easier to ascertain. Binned plots aggregate data, obscuring true positioning/distirbution and therefore masking outliers 
+
+6. Instead of creating boxes of equal width with cut_width(), we could create boxes that contain roughly equal number of points with cut_number(). What are the advantages and disadvantages of this approach?
+```{r 6}
+ggplot(diamonds, aes(x = carat, y = price)) + 
+  geom_boxplot(aes(group = cut_number(carat, 20)))
+```
+cut_number advantages:
+```
+each bin has equal number of data points - each bin equally represented - usefull when data is skewed
+highly skewed data - bins w ewaul width can be dominated by larger/smaller values (depending on how its skewed), making interpretation difficult
+prevents sparse bins when there are outliers / extreme values
+```
+cut_number disadvantages:
+```
+the inconsistent bin widths can make it harder to interpret distribution as the bin sizes aren't uniform - varying widths can distort analysis (smaller bins = more detailed information but potentially more noise vs larger = more sensitive to changes in data)
+hard to interpret scale of data- not good if goal is to see how data behaves across consistent intervals
+misleading visualisations - unequal binwidths can make it harder to see trends / patterns
+```
+
+### Patterns and Models
+patterns in data provide clues about relationships eg)revealing covariation
+variation creates uncertainty, covariation reduces it
+if 2 variables covary, can use values of 1 variable to make better predictions about values of second
+if covariation due to causal relationship, can use value of 1 variable to control value of second
+
+models = tools for extracting patterns out of data
+eg) hard to understand relationship between cut and price - cut + carat and carat + price all tightly related 
+possible to use model to remove strong relationship between carat and price
+following code fits model that predicts price from carat - then computes resideuals (difference between predicted value and actual value)
+residuals give us view of diamond price once effect of carat been removed
+instead of using raw values of price and carat, log transform them first - fit a model to log-transformed values - exponentiate residuals to put them back in scales of raw prices
+```{r MODEL}
+# install.packages('tidymodels')
+diamonds <- diamonds |>
+  mutate(
+    log_price = log(price),
+    log_carat = log(carat)
+  )
+
+diamonds_fit <- linear_reg() |>
+  fit(log_price ~ log_carat, data = diamonds)
+
+diamonds_aug <- augment(diamonds_fit, new_data = diamonds) |>
+  mutate(.resid = exp(.resid))
+
+ggplot(diamonds_aug, aes(x = carat, y = .resid)) + 
+  geom_point()
+```
+once removed strong relationship between price and carat, can see what would be expected in relationship between cut and price - relative to size, better quality diamonds more expensive
+```{r MODELS 2}
+ggplot(diamonds_aug, aes(x = cut, y = .resid)) + 
+  geom_boxplot()
+```
+
