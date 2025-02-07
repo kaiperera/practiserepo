@@ -180,3 +180,67 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
 
 ## Exercises
 1. Use geom_text() with infinite positions to place text at the four corners of the plot
+```{r 1}
+# Create the plot with text at the four corners
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(alpha = 0.3) +
+  geom_text(aes(x = Inf, y = Inf, label = "Top Right"), 
+            hjust = 1, vjust = 1, nudge_x = 0.5, nudge_y = 0.5) +  # Adjust top-right corner label
+  geom_text(aes(x = -Inf, y = Inf, label = "Top Left"), 
+            hjust = 0, vjust = 1, nudge_x = -0.5, nudge_y = 0.5) +  # Adjust top-left corner label
+  geom_text(aes(x = Inf, y = -Inf, label = "Bottom Right"), 
+            hjust = 1, vjust = 0, nudge_x = 0.5, nudge_y = -0.5) + # Adjust bottom-right corner label
+  geom_text(aes(x = -Inf, y = -Inf, label = "Bottom Left"), 
+            hjust = 0, vjust = 0, nudge_x = -0.5, nudge_y = -0.5) +  # Adjust bottom-left corner label
+  theme_minimal() +
+  theme(legend.position = "none") +  # Remove legend for clarity
+  coord_cartesian(clip = "off")  # Disable clipping to allow text outside plot area
+
+```
+
+2. Use annotate() to add a point geom in the middle of your last plot without having to create a tibble. Customize the shape, size, or color of the point.
+```{r 2}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(alpha = 0.3) +
+  geom_text(aes(x = Inf, y = Inf, label = "Top Right"), 
+            hjust = 1, vjust = 1, nudge_x = 0.5, nudge_y = 0.5) +  
+  geom_text(aes(x = -Inf, y = Inf, label = "Top Left"), 
+            hjust = 0, vjust = 1, nudge_x = -0.5, nudge_y = 0.5) + 
+  geom_text(aes(x = Inf, y = -Inf, label = "Bottom Right"), 
+            hjust = 1, vjust = 0, nudge_x = 0.5, nudge_y = -0.5) +  
+  geom_text(aes(x = -Inf, y = -Inf, label = "Bottom Left"), 
+            hjust = 0, vjust = 0, nudge_x = -0.5, nudge_y = -0.5) +   
+  theme_minimal() +
+  theme(legend.position = "none") +  
+  coord_cartesian(clip = "off")  +
+  annotate(
+    geom = "point", x = median(mpg$displ), y = median(mpg$displ), 
+    colour = "red", size = 4, shape = 17
+  )
+```
+
+3. How do labels with geom_text() interact with faceting? How can you add a label to a single facet? How can you put a different label in each facet? (Hint: Think about the dataset that is being passed to geom_text().)
+```{r 3}
+# Adding label to single facet
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~drv) + 
+  geom_text(
+  data = subset(mpg, drv == "4"),
+  aes(x = 5, y = 30, label = "4- wheel drive"), 
+  colour = "blue", size = 5, hjust = 1
+)
+
+
+# Different label per facet
+mpg_label <- ifelse(mpg$drv == "4", " 4 wheel drive",
+                    ifelse(mpg$drv == "f", "Front-wheel drive", "rear wheel drive"))
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~drv) +
+  geom_text(
+    aes(label = mpg_label), colour = "red", size = 5, hjust = 1 
+  )
+
+```
+fix plot 
