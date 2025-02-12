@@ -468,4 +468,309 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
   geom_point(aes(color = drv)) +
   scale_color_brewer(palette = "Set1")
 ```
+If just a few colours, can add redundant shape mapping - helps ensure plot is interpretable in black and white:
+```{r REDUNDANT SHAPE MAPPING}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv, shape = drv)) +
+  scale_color_brewer(palette = "Set1")
+```
+When have predefined mapping between values and colours - scale_colour_manual()
+eg) map presidential party to colour - want to use standard mapping of red = Republican, blue = Democrat - one approach = assigning colurs via hex colour codes:
+```{r HEX COLOUR CODES}
+presidential |>
+  mutate(id = 33 + row_number()) |>
+  ggplot(aes(x = start, y = id, color = party)) +
+  geom_point() +
+  geom_segment(aes(xend = end, yend = id)) +
+  scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3"))
+```
+Continuous colour - built-in scale_colour_gradient() OR scale_fill_gradient()
+if diverging scale, scale_colour_gradient2()- allows you to give eg) positive and negative values different colours - useful if want to distinguish points above or below mean
+
+Another option = viridis colour scales- perceptible to people with colourblindness as well as perceptually uniform in both colour and black/white
+available as continuous (c), discrete(d) and binned(b) palettes in ggplot2
+```{r VIRIDIS}
+df <- tibble(
+  x = rnorm(10000),
+  y = rnorm(10000)
+)
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  coord_fixed() +
+  labs(title = "Default, continuous", x = NULL, y = NULL)
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  coord_fixed() +
+  scale_fill_viridis_c() +
+  labs(title = "Viridis, continuous", x = NULL, y = NULL)
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  coord_fixed() +
+  scale_fill_viridis_b() +
+  labs(title = "Viridis, binned", x = NULL, y = NULL)
+
+```
+colour scales come in 2 varieties = scale_colour_*() + scale_fill_*() for colour and fill aesthetics separately
+
+## Zooming 
+3 ways to control plot limits:
+```
+1. Adjusting what data is plotted
+2. Setting limits for each scale
+3. setting xlim and ylim in coord_cartesian
+```
+
+Left plot = relationship between engine size and fuel efficiency coloured by drv
+right = same variables BUT subsets of data plotted - affects x and y scales + smooth curve:
+```{r SUBSETTING}
+# Left
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth()
+
+# Right
+mpg |>
+  filter(displ >= 5 & displ <= 6 & hwy >= 10 & hwy <= 25) |>
+  ggplot(aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  geom_smooth()
+```
+Setting limits on individual scales generally more useful when wanting to expand limits
+eg) to match scales across different plots
+Example = extract 2 car classes and plot separately, hard to compare plots as all 3 scales (x, y and colour) have different ranges
+```{r CAR CLASS COMPARISON}
+suv <- mpg |> filter(class == "suv")
+compact <- mpg |> filter(class == "compact")
+
+# SUV
+ggplot(suv, aes(x = displ, y = hwy, color = drv)) +
+  geom_point()
+
+# Compact
+ggplot(compact, aes(x = displ, y = hwy, color = drv)) +
+  geom_point()
+```
+Overcome by sharing scales across multiple plots - training scales with limits of full data:
+```{r CAR CLASS COMPARISON VIA SCALE SHARING}
+x_scale <- scale_x_continuous(limits = range(mpg$displ))
+y_scale <- scale_y_continuous(limits = range(mpg$hwy))
+col_scale <- scale_color_discrete(limits = unique(mpg$drv))
+
+# SUV
+ggplot(suv, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  x_scale +
+  y_scale +
+  col_scale
+
+# Compact
+ggplot(compact, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  x_scale +
+  y_scale +
+  col_scale
+```
+Could have faceted BUT this technique more useful generally ie) spread plots across multiple pages of report
+
+## Exercises
+1. Why doesn’t the following code override the default scale?
+```{r 1}
+df <- tibble(
+  x = rnorm(10000),
+  y = rnorm(10000)
+)
+
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  scale_color_gradient(low = "white", high = "red") +
+  coord_fixed()
+
+#Corrected
+ggplot(df, aes(x, y)) +
+  geom_hex() +
+  scale_fill_gradient(low = "white", high = "red") +  # Use fill instead of color
+  coord_fixed()
+
+```
+geom_hex uses fill aesthetic for colouring not colour for the hexagons
+
+2.What is the first argument to every scale? How does it compare to labs()?
+
+Usually aesthetic argument
+scale functions controls mapping of variables to aesthetics and appearance of aesthetics - used to modify how data is represented visually
+labs used for adding or modifying axis labels, legends, titles - doesnt control data appearance
+
+3. Change the display of the presidential terms by:
+
+    a)Combining the two variants that customize colors and x axis breaks.
+    b)Improving the display of the y axis.
+    c)Labelling each term with the name of the president.
+    d)Adding informative plot labels.
+    e)Placing breaks every 4 years (this is trickier than it seems!).
+
+```{r 3a}
+presidential_duration <- presidential |> 
+  mutate(
+    term_duration = as.numeric(end - start)
+  )
+
+ggplot(presidential_duration, aes(x = name, y = term_duration, colour = party)) +
+  geom_point() +
+  scale_x_discrete(name = NULL) + # Use scale_x_discrete for categorical data
+   scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3")) 
+ 
+  
+  
+```
+```{r 3b}
+presidential_duration <- presidential |> 
+  mutate(
+    term_duration_years = as.numeric(end - start) / 365.25  # Convert duration to years
+  )
+
+ggplot(presidential_duration, aes(x = name, y = term_duration_years, colour = party)) +
+  geom_point() +
+  scale_x_discrete(name = NULL) +
+  scale_y_continuous(
+    labels = label_number(scale = 1, accuracy = 1)
+  ) +
+  labs(y = "Term Duration (Years)") +
+  scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3"))
+
+  
+```
+```{r 3c}
+presidential_duration <- presidential |> 
+  mutate(
+    term_duration = as.numeric(end - start)
+  )
+
+ggplot(presidential_duration, aes(x = name, y = term_duration, colour = party)) +
+  geom_point() +
+  scale_x_discrete(name = NULL) + # Use scale_x_discrete for categorical data
+   scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3")) +
+  geom_text_repel(
+    aes(label = name, vjust = -0.5, size = 4)
+  )
+
+```
+```{r 3d}
+presidential_duration <- presidential |> 
+  mutate(
+    term_duration = as.numeric(end - start)
+  )
+
+ggplot(presidential_duration, aes(x = name, y = term_duration, fill = party)) +
+  geom_bar(stat = "identity") +
+  scale_x_discrete(name = NULL) + # Use scale_x_discrete for categorical data
+   scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3")) +
+  geom_text_repel(
+    aes(label = name, vjust = -0.5, size = 4),
+    colour = "green"
+  ) +
+  labs(
+    title = "Presidential Term Dates",
+    x = "President", 
+    y = "Term Duration (Days)"
+  )
+```
+```{r 3e}
+# Add term duration in Years
+presidential_duration <- presidential |> 
+  mutate(
+    term_duration = as.numeric(end - start)/ 365.25,
+    start_year = as.numeric(format(start, "%Y")),  # Extracting the start year
+    end_year = as.numeric(format(end, "%Y"))  # Extracting the end year
+  )
+
+# Plot
+ggplot(presidential_duration, aes(x = start_year, y = term_duration, colour = party)) +
+  geom_point() +
+  scale_x_continuous(
+    name = NULL, 
+    breaks = seq(min(presidential_duration$start_year), 
+                 max(presidential_duration$end_year), 
+                 by = 4),  # Break every 4 years
+    labels = function(x) paste0("'", substr(x, 3, 4))  # Format years like '53, '61
+  ) +
+  scale_color_manual(values = c(Republican = "#E81B23", Democratic = "#00AEF3")) +
+  geom_text_repel(
+    aes(label = name, vjust = -0.5, size = 4)
+  ) +
+  labs(
+    title = "Presidential Term Durations",
+    x = "Year", 
+    y = "Term Duration (Years)"
+  )
+
+```
+
+4. First, create the following plot. Then, modify the code using override.aes to make the legend easier to see
+```{r 4}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(aes(color = cut)) +
+  guides(color = guide_legend(nrow = 1, override.aes = list(size = 4))) +
+  scale_color_manual(values = c("Fair" = "green", "Very Good" = "blue", "Ideal" = "red", "Good" = "pink", "Premium" = "purple"))
+```
+
+### Themes
+Can customise non-data elements of plot with theme:
+```{r THEMES}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(se = FALSE) +
+  theme_bw()
+```
+Can control individual components of each theme eg) size and colour of font used
+Can chnage direction of legend + put in black border around it
+legend box customisation and plot title elements of theme done with element_*() - specify styling of non-data components e.g., the title text is bolded in the face argument of element_text() and the legend border color is defined in the color argument of element_rect().
+Theme elements controlling title / caption position = plot.title.position + plot.caption.position
+in following plot, set to "plot" - indicates these elements are aligned to entire plot area instead of plot panel(default)
+```{r PLOT.TITLE/CAPTION.POSITION}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  labs(
+    title = "Larger engine sizes tend to have lower fuel economy",
+    caption = "Source: https://fueleconomy.gov."
+  ) +
+  theme(
+    legend.position = c(0.6, 0.7),
+    legend.direction = "horizontal",
+    legend.box.background = element_rect(color = "black"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption.position = "plot",
+    plot.caption = element_text(hjust = 0)
+  )
+
+```
+
+## Exercises
+1. Pick a theme offered by the ggthemes package and apply it to the last plot you made.
+```{r 1}
+ggplot(compact, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  x_scale +
+  y_scale +
+  col_scale +
+  theme_bw()
+```
+2. Make the axis labels of your plot blue and bolded
+```{r 2}
+ggplot(compact, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  x_scale +
+  y_scale +
+  col_scale +
+  theme(
+    axis.title.x = element_text(color = "blue", face = "bold"),  
+    axis.title.y = element_text(color = "blue", face = "bold")   
+  )
+  
+```
+
+### Layout
 
