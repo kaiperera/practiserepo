@@ -773,4 +773,97 @@ ggplot(compact, aes(x = displ, y = hwy, color = drv)) +
 ```
 
 ### Layout
+To place 2 plots next to each other, can add them to each other:
+```{r ADD PLOTS TO EACH OTHER}
+#install.packages("patchwork") 
+p1 <- ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 1")
+p2 <- ggplot(mpg, aes(x = drv, y = hwy)) + 
+  geom_boxplot() + 
+  labs(title = "Plot 2")
+p1 + p2
+```
+Can also use patchwork to make more complex patch layouts 
+| places the p1 and p3 next to each other and / moves p2 to the next line.
+```{r MORE COMPLEX PATCH LAYOUTS}
+p3 <- ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 3")
+(p1 | p3) / p2
+```
+Patchwork lets you collect legends from multiple plots in 1 common legend
+can customise legend placement + plot dimensions + common title/subtitle/caption etc.
+
+Following 5 plots - turned off legends on box plots + scatterplot
+collected legends for density plots at top of plot with & theme- used instead of + - modifying theme for patchwork plot rather than individual ggplots
+Legend placed on top, inside guide_are()
+customised heights of various components of patchwork-  the guide has a height of 1, the box plots 3, density plots 2, and the faceted scatterplot 4
+Patchwork divides up the area you have allotted for your plot using this scale and places the components accordingly.
+```{r PATCHWORK}
+p1 <- ggplot(mpg, aes(x = drv, y = cty, color = drv)) + 
+  geom_boxplot(show.legend = FALSE) + 
+  labs(title = "Plot 1")
+
+p2 <- ggplot(mpg, aes(x = drv, y = hwy, color = drv)) + 
+  geom_boxplot(show.legend = FALSE) + 
+  labs(title = "Plot 2")
+
+p3 <- ggplot(mpg, aes(x = cty, color = drv, fill = drv)) + 
+  geom_density(alpha = 0.5) + 
+  labs(title = "Plot 3")
+
+p4 <- ggplot(mpg, aes(x = hwy, color = drv, fill = drv)) + 
+  geom_density(alpha = 0.5) + 
+  labs(title = "Plot 4")
+
+p5 <- ggplot(mpg, aes(x = cty, y = hwy, color = drv)) + 
+  geom_point(show.legend = FALSE) + 
+  facet_wrap(~drv) +
+  labs(title = "Plot 5")
+
+(guide_area() / (p1 + p2) / (p3 + p4) / p5) +
+  plot_annotation(
+    title = "City and highway mileage for cars with different drive trains",
+    caption = "Source: https://fueleconomy.gov."
+  ) +
+  plot_layout(
+    guides = "collect",
+    heights = c(1, 3, 2, 4)
+    ) &
+  theme(legend.position = "top")
+```
+
+## Exercises
+1. What happens if you omit the parentheses in the following plot layout. Can you explain why this happens?:
+```{r 1}
+p1 <- ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 1")
+p2 <- ggplot(mpg, aes(x = drv, y = hwy)) + 
+  geom_boxplot() + 
+  labs(title = "Plot 2")
+p3 <- ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 3")
+
+p1 | p2 / p3
+```
+makes p1 the divided plot - BIDMAS- bracketed commands get priority execution
+
+2. Using the three plots from the previous exercise, recreate the following patchwork.
+```{r}
+p1 <- ggplot(mpg, aes(x = displ, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 1")
+p2 <- ggplot(mpg, aes(x = drv, y = hwy)) + 
+  geom_boxplot() + 
+  labs(title = "Plot 2")
+p3 <- ggplot(mpg, aes(x = cty, y = hwy)) + 
+  geom_point() + 
+  labs(title = "Plot 3") 
+
+p1 / (p2 +p3)
+
+```
 
