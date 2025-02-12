@@ -229,18 +229,243 @@ ggplot(mpg, aes(x = displ, y = hwy)) +
   data = subset(mpg, drv == "4"),
   aes(x = 5, y = 30, label = "4- wheel drive"), 
   colour = "blue", size = 5, hjust = 1
-)
+) +
+  geom_text(
+    data = subset(mpg, drv == "f"),
+    aes(x = 5, y= 30, label = "front wheel drive"), 
+    colour = "red", size = 5, 
+  ) +
+  geom_text(
+    data = subset(mpg, drv == "r"),
+    aes(x = 5, y= 30, label ="rear wheel drive"), 
+    colour = "green", size = 5, 
+  )
 
 
-# Different label per facet
-mpg_label <- ifelse(mpg$drv == "4", " 4 wheel drive",
-                    ifelse(mpg$drv == "f", "Front-wheel drive", "rear wheel drive"))
+
+
+```
+
+4.What arguments to geom_label() control the appearance of the background box?
+
+fill = controls background colour of label
+colour = controls border colour
+label.padding = controls padding around text in label- adds space between text and border
+label. r = Controls the radius of the corners of the label box
+label.size = controls border thickness in mm
+label.fontface = controls font
+label.colour = controls text colour
+
+5. What are the four arguments to arrow()? How do they work? Create a series of plots that demonstrate the most important options
+
+a) type = controls arrowhead style- open(default), closed and both - last adds arrowhead to both ends
+b) length = controls size- eg)unit(0.25, "inches") - default
+c) angle = 15 - default
+d) ends = which end of the line should have arrows - last (default), first, both
+```{r 5a }
 ggplot(mpg, aes(x = displ, y = hwy)) +
   geom_point() +
-  facet_wrap(~drv) +
-  geom_text(
-    aes(label = mpg_label), colour = "red", size = 5, hjust = 1 
+  geom_segment(
+    aes(xend = displ, yend = hwy),
+    arrow = arrow(type = "open"),
+    color = "blue"
+  )
+```
+```{r 5b}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_segment(
+    aes(xend = displ, yend = hwy),
+    arrow = arrow(length = unit(0.1, "inches")),
+    color = "blue"
+  )
+```
+```{r 5c}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_segment(
+    aes(xend = displ, yend = hwy),
+    arrow = arrow(angle = 5),
+    color = "blue"
+  )
+```
+```{r 5d}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  geom_segment(
+    aes(xend = displ, yend = hwy),
+    arrow = arrow(ends = "last"),
+    color = "blue"
+  )
+```
+```{r 5 ALL}
+library(ggplot2)
+library(grid)
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_segment(
+    aes(xend = displ + 1, yend = hwy + 5), 
+    arrow = arrow(type = "closed", length = unit(0.3, "inches"), angle = 25, ends = "both"),
+    color = "blue"
   )
 
 ```
-fix plot 
+
+### Scales
+## Default Scales
+ggplot automatically adds scales:
+```{r DEFAULT SCALES}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+```
+automatic defaults behind scenes:
+```{r WHAT THE DEFAULTS ARE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  scale_x_continuous() +
+  scale_y_continuous() +
+  scale_color_discrete()
+```
+naming scheme = scale_ aesthetic_ name of scale
+default scales names according to type of variable align with eg) continuous
+scale_x_continuous = puts numeric values from displ on continuous number line on x axis
+scale_colour_discrete = chooses colour for each class of car etc
+may want to override defaults for 2 reasons:
+```
+1. tweak parameters of default scale  - change axes breaks / key labels on legends
+2. replace scale completely - use completely different algorithm - usually can do better than default as you know your data
+```
+
+## Axis ticks and Legend Keys
+axes + legends = guides - axis= x and y aesthetics, legend = everything else
+2 main arguments affecting appearance of ticks on axes / keys on legend : breaks and labels
+breaks = controls tick position / values associated w keys
+labels = controls text label associated with each tick / key
+most common use of breaks is to override default:
+```{r BREAKS TO OVERRIDE DEFAULT}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  scale_y_continuous(breaks = seq(15, 40, by = 5)) 
+```
+can use labels in same way (character vector same length as breaks) BUT can also set to NULL to suppress labels completely
+useful for maps  / publishing plots where can't share absolute numbers
+can also use breaks and labels to control legend appearance
+for discrete scales of categorical variables, labels can be named list of existing level names and desired labels for them:
+```{r DISCRETE LABELS}
+ggplot(mpg, aes(x = displ, y = hwy, color = drv)) +
+  geom_point() +
+  scale_x_continuous(labels = NULL) +
+  scale_y_continuous(labels = NULL) +
+  scale_color_discrete(labels = c("4" = "4-wheel", "f" = "front", "r" = "rear"))
+```
+Labels argument + labelling functions from scales package useful for formatting numbers as currency/percent etc.
+left plot = default labelling w label_dollar() - adds $ + thousand separator commas
+right plot = adds more customisation by dividing dollar values by 1000 + adding suffix K + adds custom breaks - breaks is in OG scale of data
+```{r $ EXAMPLE}
+# Left
+ggplot(diamonds, aes(x = price, y = cut)) +
+  geom_boxplot(alpha = 0.05) +
+  scale_x_continuous(labels = label_dollar())
+
+# Right
+ggplot(diamonds, aes(x = price, y = cut)) +
+  geom_boxplot(alpha = 0.05) +
+  scale_x_continuous(
+    labels = label_dollar(scale = 1/1000, suffix = "K"), 
+    breaks = seq(1000, 19000, by = 6000)
+  )
+```
+```{r LABEL_PERCENT}
+ggplot(diamonds, aes(x = cut, fill = clarity)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(name = "Percentage", labels = label_percent())
+```
+Breaks can also be used w relatively few data points + want to highlight exactly where obs occur 
+eg) plot showing when each US president began and ended their term:
+```{r BREAKS - FEW DATA POINTS AND HIGHLIGHTED OBS}
+presidential |>
+  mutate(id = 33 + row_number()) |>
+  ggplot(aes(x = start, y = id)) +
+  geom_point() +
+  geom_segment(aes(xend = end, yend = id)) +
+  scale_x_date(name = NULL, breaks = presidential$start, date_labels = "'%y")
+```
+used start variables for as vector w presidential$start - can't do aesthetic mapping for this argument 
+specs of breaks and labels for date / datetime scales different
+```
+1. date_labels = format spec same as parse_datetime()
+2. date_breaks = takes string like "2 days"
+```
+
+## Legend Layout
+most often use breaks and labels to tweak axes - both work for legends but better options
+to control overall legend position - need to use theme()- control non-data parts of plot
+theme legend.position controls where legend is drawn:
+```{r LEGEND. POSITION}
+base <- ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+
+base + theme(legend.position = "right") # the default
+base + theme(legend.position = "left")
+base + 
+  theme(legend.position = "top") +
+  guides(color = guide_legend(nrow = 3))
+base + 
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(nrow = 3))
+```
+plot short + wide = legend on top / bottom
+tall + narrow = left / right
+legend.position = "none" = suppress legend display
+To control individual legend display, use guides() + guide_legend() or guide_colourbar()
+Example shows 2 important settings: controlling number of rows in legend (nrow) + overriding one of the aesthetics to make point bigger - useful if have low alpha to display many points on plot:
+```{r NROW AND AESTHETIC OVERRIDE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(se = FALSE) +
+  theme(legend.position = "bottom") +
+  guides(color = guide_legend(nrow = 2, override.aes = list(size = 4)))
+#> `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
+```
+name of argument in guides() matches aesthetic name like in labs()
+
+## Replacing a Scale
+Can replace scale completely rather than tweaking scale
+2 types of scale most likely wanting switching out:
+```
+1. continuous position scales
+2. colour scales
+```
+
+Same principles apply to all other aesthetics 
+useful to plot transformations of variable eg) easier to see precise relationship between carat and price if log transform them:
+```{r VARIABLE TRANSFORMATION PLOT}
+# Left
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_bin2d()
+
+# Right
+ggplot(diamonds, aes(x = log10(carat), y = log10(price))) +
+  geom_bin2d()
+```
+Disadvanatge = axes now labelles w transformed values - hard to interpret plot
+instead of transforming in aesthetic mapping, can do in scale instead - visually identical BUT axes labelled on OG data scale :
+```{r SCALE TRANSFORMATION}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_bin2d() + 
+  scale_x_log10() + 
+  scale_y_log10()
+```
+Colour also frequently customised
+default categorical scale picks colours that are evenly spaced around colour wheel
+useful alts = ColorBrewer scales - tweaked to work better for people with common cololour blindness
+following 2 plots look similar BUT enough difference in shades of red and green that dots on right can be distinguishedby people with red-green colourblindness
+```{r COLOURBLINDNESS }
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv))
+
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = drv)) +
+  scale_color_brewer(palette = "Set1")
+```
+
