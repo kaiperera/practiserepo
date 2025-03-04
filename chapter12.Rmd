@@ -160,3 +160,147 @@ All rows with dep_time missing also have dep_delay missing
 scheduled departure time never missing
 missing values in dep_time and dep_delay indicate cancelled flights 
 ```
+
+
+### Boolean Algebra 
+once there are multiple logical vectors, can combine together using this
+& = and, | = or, ! = not, xor() = exclusive or (xor(x, y) is true if x is true, or y is true, but not both)
+eg) df |> filter(!is.na(x)) finds all rows where x isn't missing 
+df |>  filter(x < -10 | x > 0) finds all rows where x is smaller than -10 or greater than 0
+dont use && or || in dplyr functions - called short circuiting operators and only ever return single true or false - programming not data science
+
+## Missing Values
+rules for missing values in BA seem inconsistent at first:
+```{r BOOLEAN NAs FIRST GLANCE}
+df <- tibble(x = c(TRUE, FALSE, NA))
+df |> 
+  mutate(
+    and = x & NA,
+    oe = x | NA
+  )
+```
+NA | TRUE - missing value in logical vector means that value could be either true or false
+TRUE | TRUE / FALSE | TRUE are both TRUE because at least one of them is TRUE
+NA | TRUE must also be ture because NA can be either true or false
+BUT
+NA | FALSE is NA because we don't know if NA is true or false - same reasoninh for NA & FALSE
+
+## Order of Operations
+doesnt work like in English:
+```{r ALL FLIGHTS THAT DEPARTED IN NOVEMBER OR DECEMBER}
+flights |> 
+  filter(month == 11 | month == 12)
+```
+might be tempted to write code so as to say " find all flights that departed in november or december":
+```{r INCORRECT VERSION OF ABOVE CODE}
+flights |> 
+  filter(month == 11 | 12)
+```
+no error message but doesnt seem to have worked
+R evalutes month == 11 creating logical vectors (nov) - computes nov | 12
+when use a number with logical operator, converts everything apart from 0 to TRUE - equivalent to nov | TRUE- will always be TRUE so every row selected:
+```{r CORRECTION}
+flights |> 
+  mutate(
+    nov = month == 11,
+    final = nov | 12,
+    .keep = "used"
+  )
+```
+
+## %in%
+easy way to  using == and | in right order is this 
+x %in% y returns logical vector same length as x that is TRUE whenever value in x is anywhere in y:
+```{r %IN%}
+1:12 %in% c(1, 5, 11)
+
+letters[1:10] %in% c("a", "e", "i", "o", "u")
+```
+so to find all flights in november and december:
+```{r FLIGHTS IN NOV AND DEC USING %IN%}
+flights |> 
+  filter(month %in% c(11, 12))
+```
+
+%in% oberys different rules for NA to ==, as NA %in% NA is TRUE:
+```{r %IN% HAS DIFFERENT RULES FOR NA}
+c(1, 2, NA) == NA
+
+c(1, 2, NA) %in% NA
+```
+can be a useful shortcut:
+```{r USE AS A SHORTCUT}
+flights |> 
+  filter(dep_time %in% c(NA, 0800))
+```
+
+## Exercises
+1. Find all flights where arr_delay is missing but dep_delay is not. Find all flights where neither arr_time nor sched_arr_time are missing, but arr_delay is.
+```{r 1}
+# flights where arr_delay missing but not dep_delay
+missing_arr_delay <- flights |> 
+  filter(is.na(arr_delay) & !dep_delay %in% NA)
+
+# flights where neither arr_time or sched_arr_time are missing but arr_delay is 
+missing_arr_delay_times <- flights |> 
+  filter(!arr_time %in% NA & !sched_arr_time %in% NA & arr_delay %in% NA)
+
+view(missing_arr_delay)
+```
+
+2. How many flights have a missing dep_time? What other variables are missing in these rows? What might these rows represent?
+```{r 2}
+# flights w missing dep_time
+missing_dep_time <- flights |> 
+  filter(is.na(dep_time))
+
+#number of flights with missing dep_time
+count_missing <- nrow(missing_dep_time)
+
+#See which other variables are missing in these rows
+missing_summary <- missing_dep_time |> 
+  summarise(across(everything(), ~ sum(is.na(.)), .names = "missing_{.col}"))
+
+missing_summary
+```
+
+3. Assuming that a missing dep_time implies that a flight is cancelled, look at the number of cancelled flights per day. Is there a pattern? Is there a connection between the proportion of cancelled flights and the average delay of non-cancelled flights
+```{r 3}
+#identify cancelled flights
+cancelled <- flights |> 
+  filter(is.na(dep_time))
+
+#Number of cancelled a day
+cancelled_daily <- cancelled |> 
+  count(date = as.Date(time_hour)) |> 
+  rename(cancelled_flights = n)
+
+#calculate number of total flights per day 
+total_flights <- flights |> 
+  count(date = as.Date(time_hour)) |> 
+  rename(total_flights = n)
+
+#combine to get proportion of cancelled flights per day
+cancelled_vs_total <- left_join(cancelled_daily, total_flights, by = "date") |> 
+  mutate(proportion_cancelled = cancelled_flights / total_flights)
+
+#calculate average delay of non-cancelled
+avg_non_can_delay <- flights |> 
+  filter(is.na(dep_time)) |> 
+  group_by(date = as.Date(time_hour)) |> 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+
+#jOIN DATASETES
+final_data <- left_join(cancelled_vs_total, avg_non_can_delay, by = "date") 
+
+# plot
+ggplot(final_data, aes(x = proportion_cancelled, y = avg_delay)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs( title = "proportion of cancelled flights vs average delay of non cancelled flights",
+        x = "proportion of cancelled flights", 
+        y = "average delay of non-cancelled flights in mins") +
+  theme_classic()
+```
+
+continue w plot
