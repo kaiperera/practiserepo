@@ -1,0 +1,162 @@
+---
+title: "chapter12"
+output: html_document
+date: "2025-03-04"
+---
+#### Logical Vectors
+### Prerequisites
+```{r PREREQUISITES}
+library(tidyverse)
+library(nycflights13)
+
+x <- c(1, 2, 3, 5, 7, 11, 13)
+x * 2
+
+
+df <- tibble(x)
+df |> 
+  mutate(y = x * 2)
+```
+
+### Comparisons
+A very common way to create logical vector = numeric comparsion with <, <= , >, >=, !=,and == 
+have currently mostly created logical variables transiently via filter() =  - computed, used, then thrown away
+```{r EXAMPLE: FILTER FINDS ALL DAYTIME DEPARTURES THAT ARRIVE ROUGHLY ON TIME}
+flights |> 
+  filter(dep_time > 600 & dep_time < 2000 & abs(arr_delay) < 20)
+```
+Useful to know that this is a shortcut - can explicityl create unnderlying logical variables w mutate:
+```{r EXAMPLE CONT. USING MUTATE}
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20,
+    .keep = "used"
+  ) 
+```
+particularly useful for more complicated logic - na,ing intermediate steps makes it easier to read code + check each step has been computed correctly
+initial filter equivalent to:
+```{r FILTER EQUIVALENT TO}
+flights |> 
+  mutate(
+    daytime = dep_time > 600 & dep_time < 2000,
+    approx_ontime = abs(arr_delay) < 20,
+  ) |> 
+  filter(daytime & approx_ontime)
+```
+
+
+## FLoating Point COmpariosn
+Beware of using == w numbers eg) following looks like vector contains numbers 1 and 2 but when tested for equality, get FALSE:
+```{r BEWARE ==}
+x <- c(1 / 49 * 49, sqrt(2) ^ 2)
+x
+
+x == c(1, 2)
+```
+why? computers store numbers with fixed number of decimal places - no way to exactly represent 1/49 or sqrt(2) 
+subsequnet computations will be slightly off
+can see exact values by calling print() with digits argument:
+```{r DIGITS}
+print(x, digits = 16)
+```
+R defaults to rounding these numbers as they are really close
+now can see why == is failing, how can we fix it?
+1 way is to use dplyr::near() - ignores small differences:
+```{r NEAR}
+near(x, c(1, 2))
+```
+
+## Missing Values
+represent unknowns - "contagious" - operations involving unknown values will also be unknown
+most confusing result is :
+```{r CONFUSING RESULT}
+NA == NA
+```
+easier to understand why if we articifically supply more context:
+```{r THEORY AS TO WHY IT FAILS}
+# We don't know how old Mary is
+age_mary <- NA
+
+# We don't know how old John is
+age_john <- NA
+
+# Are Mary and John the same age?
+age_mary == age_john
+#> [1] NA
+# We don't know!
+```
+
+SO IF WANT TO FIND ALL FLIGHTS WHERE DEP_TIME IS MISSING, FOLLOWING CODE DOESN'T WORK - dep_time == NA
+NA yilded for every single row
+filter automatically drops missing values
+Instead, use new tool = is.na()
+
+## is.na()
+works with any type of vector - returns TRUE for missing values and FALSE for anything else:
+```{r IS.NA}
+is.na(c(TRUE, NA, FALSE))
+
+is.na(c(1,NA,3))
+
+is.na(c("a", NA, "b"))
+```
+can use this argument to find all rows with missing dep_time:
+```{r USING TO FIND MISSING DEP_TIME}
+flights |> 
+  filter(is.na(dep_time))
+```
+can also be useful in arrange() - usually puts all missing values at end but can override default by first sorting by is.na:
+```{r USE IN ARRANGE}
+flights |> 
+  filter(month == 1, day == 1) |> 
+  arrange(dep_time)
+
+#vs
+
+flights |> 
+  filter(month == 1, day == 1) |> 
+  arrange(desc(is.na(dep_time)), dep_time)
+```
+
+## Exercises
+1. How does dplyr::near() work? Type near to see the source code. Is sqrt(2)^2 near 2?
+```
+source code = function (x, y, tol = .Machine$double.eps^0.5) 
+{
+    abs(x - y) < tol
+}
+MEANING = .Machine$double.eps = smallest positive floating - point number such that 1 + eps ! = 1
+          tol = .Machine$double.eps^0.5 = square root of this small value, usually around 1.49e-8
+          function checks iof absolute difference between x and y is smaller than tol
+          
+near function used to compare 2 numeric values for near - equality, accounting for floating - point error precision errors
+in R, floating - point arithmetic can result in small rounding errors - helps check if 2 numbers are approximately equal by tolerating epsilon (small margin of error)
+```
+```{r 1}
+sqrt(2)^2 == 2
+near(sqrt(2)^2,2) # Yes, near 2 when using near
+```
+2. Use mutate(), is.na(), and count() together to describe how the missing values in dep_time, sched_dep_time and dep_delay are connected.
+```{r 2}
+flights |> 
+  mutate(
+    dep_time_na = is.na(dep_time),
+    sched_dep_time_na = is.na(sched_dep_time),
+    dep_delay_na = is.na(dep_delay)
+  ) |> 
+  count(dep_time_na, sched_dep_time_na, dep_time_na)
+```
+```
+dep_time_na = FALSE - departure time not missing (flight departed)
+sched_dep_time_na = FALSE - scheduled deprarture time never missing
+dep_delay_na = FALSE -  departure delay not missing as fligth actually departed
+
+dep_time_na = TRUE - departure time missing
+sched_dep_time_na = FALSE
+dep_delay_na = TRUE - departure delay missing - no flight = no delay
+
+All rows with dep_time missing also have dep_delay missing
+scheduled departure time never missing
+missing values in dep_time and dep_delay indicate cancelled flights 
+```
